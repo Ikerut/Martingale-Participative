@@ -263,6 +263,7 @@ body{font-family:-apple-system,'Segoe UI',system-ui,sans-serif;background:var(--
   border-radius:20px 20px 0 0;
   padding:20px 20px calc(20px + var(--safe-bot));
   width:100%;max-width:480px;
+  max-height:85vh;overflow-y:auto;-webkit-overflow-scrolling:touch;
   transform:translateY(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);
 }
 .modal-bg.open .modal{transform:translateY(0);}
@@ -292,6 +293,14 @@ body{font-family:-apple-system,'Segoe UI',system-ui,sans-serif;background:var(--
 
 /* ── ADD FORM PAGE ── */
 .form-page{padding-bottom:20px;}
+.combo-row{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 10px 4px;margin-bottom:10px;}
+.combo-row-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;font-size:0.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;}
+.combo-row-del{background:none;border:none;color:var(--loss);font-size:0.9rem;cursor:pointer;padding:2px 6px;}
+.combo-total-row{display:flex;justify-content:space-between;align-items:center;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:0.85rem;font-weight:700;font-variant-numeric:tabular-nums;}
+.combo-badge{background:rgba(79,110,247,.18);color:var(--accent);font-size:0.62rem;font-weight:700;padding:2px 6px;border-radius:5px;flex-shrink:0;}
+.combo-list{margin:4px 0 2px;padding-left:8px;border-left:2px solid var(--border2);display:flex;flex-direction:column;gap:2px;}
+.combo-item{display:flex;justify-content:space-between;font-size:0.7rem;color:var(--muted);gap:8px;}
+.combo-item span:last-child{color:var(--text);font-variant-numeric:tabular-nums;flex-shrink:0;}
 
 /* ── CALENDRIER ── */
 .cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
@@ -417,27 +426,46 @@ body{font-family:-apple-system,'Segoe UI',system-ui,sans-serif;background:var(--
       </div>
 
       <div class="form-row">
-        <label>Sport</label>
-        <select id="fSport">
-          <option>Football</option><option>Tennis</option><option>Basketball</option>
-          <option>Hockey</option><option>Badminton</option><option>Tennis de table</option>
-          <option>Volleyball</option><option>Foot américain</option><option>Rugby</option><option>Autre</option>
-        </select>
+        <label>Type de pari</label>
+        <div class="chart-tabs" style="margin-top:2px;">
+          <div class="ctab active" id="betTypeSimple" onclick="setBetType('simple',this)">Simple</div>
+          <div class="ctab" id="betTypeCombine" onclick="setBetType('combine',this)">🔗 Combiné</div>
+        </div>
       </div>
 
-      <div class="form-row">
-        <label>Match / Événement</label>
-        <input type="text" id="fMatch" placeholder="ex: PSG vs Lyon" autocomplete="off">
+      <div id="simpleFields">
+        <div class="form-row">
+          <label>Sport</label>
+          <select id="fSport">
+            <option>Football</option><option>Tennis</option><option>Basketball</option>
+            <option>Hockey</option><option>Badminton</option><option>Tennis de table</option>
+            <option>Volleyball</option><option>Foot américain</option><option>Rugby</option><option>Autre</option>
+          </select>
+        </div>
+
+        <div class="form-row">
+          <label>Match / Événement</label>
+          <input type="text" id="fMatch" placeholder="ex: PSG vs Lyon" autocomplete="off">
+        </div>
+
+        <div class="form-row">
+          <label>Pronostic</label>
+          <input type="text" id="fProno" placeholder="ex: PSG gagne, +2.5 buts…" autocomplete="off">
+        </div>
+
+        <div class="form-row">
+          <label>Cote</label>
+          <input type="number" id="fCote" step="0.01" min="1.01" placeholder="1.55" inputmode="decimal">
+        </div>
       </div>
 
-      <div class="form-row">
-        <label>Pronostic</label>
-        <input type="text" id="fProno" placeholder="ex: PSG gagne, +2.5 buts…" autocomplete="off">
-      </div>
-
-      <div class="form-row">
-        <label>Cote</label>
-        <input type="number" id="fCote" step="0.01" min="1.01" placeholder="1.55" inputmode="decimal">
+      <div id="comboFields" style="display:none;">
+        <div id="comboList"></div>
+        <button type="button" class="btn btn-ghost" style="width:100%;padding:9px;font-size:0.8rem;margin-bottom:10px;" onclick="addComboRow()">＋ Ajouter une sélection</button>
+        <div class="combo-total-row">
+          <span>Cote combinée</span>
+          <span id="comboCoteResult">—</span>
+        </div>
       </div>
 
       <div class="form-row">
@@ -598,9 +626,10 @@ body{font-family:-apple-system,'Segoe UI',system-ui,sans-serif;background:var(--
       <div class="rpick r-pending" onclick="selectResult('En cours',this)">⏳ En cours</div>
     </div>
     <div class="cashout-wrap" id="cashoutWrap">
-      <label style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;">Gain net cashout (€)</label>
-      <input type="number" id="editCashoutVal" step="0.01" placeholder="ex: 3.50 ou -1.20" inputmode="decimal"
+      <label style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;">Montant reçu au cashout (€)</label>
+      <input type="number" id="editCashoutVal" step="0.01" placeholder="ex: 12.00" inputmode="decimal"
         style="width:100%;background:var(--surface);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-size:1rem;padding:10px 12px;outline:none;margin-top:5px;">
+      <div style="font-size:0.68rem;color:var(--muted);margin-top:5px;">Le gain/perte net est calculé automatiquement : montant reçu − mise.</div>
     </div>
     <div class="modal-actions">
       <button class="btn btn-primary" style="flex:1;" onclick="saveEdit()">Enregistrer</button>
@@ -798,7 +827,7 @@ function getCumuls(bk){const mises=getMises(bk),c=[];let cum=0;for(const m of mi
 function computeGain(mise,cote,status,cashoutGain){
   if(status==='Gagné')return Math.round((cote-1)*mise*100)/100;
   if(status==='Perdu')return Math.round(-mise*100)/100;
-  if(status==='Cashout')return cashoutGain??0;
+  if(status==='Cashout')return Math.round(((cashoutGain??0)-mise)*100)/100;
   return 0;
 }
 function allBets(){return state.sequences.flatMap(s=>s.bets);}
@@ -835,19 +864,108 @@ function seqStatus(seq){
 // ═══════════════════════════
 //  ADD BET
 // ═══════════════════════════
+let betType='simple';
+let comboRowIdSeq=0;
+
+function setBetType(type,el){
+  betType=type;
+  document.getElementById('betTypeSimple').classList.toggle('active',type==='simple');
+  document.getElementById('betTypeCombine').classList.toggle('active',type==='combine');
+  document.getElementById('simpleFields').style.display = type==='simple'?'':'none';
+  document.getElementById('comboFields').style.display = type==='combine'?'':'none';
+  if(type==='combine' && document.getElementById('comboList').children.length===0){
+    addComboRow();addComboRow();
+  }
+}
+function addComboRow(){
+  const id=++comboRowIdSeq;
+  const list=document.getElementById('comboList');
+  const div=document.createElement('div');
+  div.className='combo-row';
+  div.dataset.id=id;
+  div.innerHTML=`
+    <div class="combo-row-head">
+      <span>Sélection</span>
+      <button type="button" class="combo-row-del" onclick="removeComboRow(${id})">🗑</button>
+    </div>
+    <div class="form-row" style="margin-bottom:6px;">
+      <select class="combo-sport">
+        <option>Football</option><option>Tennis</option><option>Basketball</option>
+        <option>Hockey</option><option>Badminton</option><option>Tennis de table</option>
+        <option>Volleyball</option><option>Foot américain</option><option>Rugby</option><option>Autre</option>
+      </select>
+    </div>
+    <div class="form-row" style="margin-bottom:6px;">
+      <input type="text" class="combo-match" placeholder="Match / Événement" autocomplete="off">
+    </div>
+    <div class="form-row" style="margin-bottom:6px;">
+      <input type="text" class="combo-prono" placeholder="Pronostic (optionnel)" autocomplete="off">
+    </div>
+    <div class="form-row" style="margin-bottom:0;">
+      <input type="number" class="combo-cote" step="0.01" min="1.01" placeholder="Cote" inputmode="decimal" oninput="updateComboCote()">
+    </div>`;
+  list.appendChild(div);
+  updateComboRowLabels();
+  updateComboCote();
+}
+function removeComboRow(id){
+  const list=document.getElementById('comboList');
+  const row=list.querySelector(`.combo-row[data-id="${id}"]`);
+  if(row)row.remove();
+  if(list.children.length===0){addComboRow();addComboRow();return;}
+  updateComboRowLabels();
+  updateComboCote();
+}
+function updateComboRowLabels(){
+  document.querySelectorAll('#comboList .combo-row').forEach((row,i)=>{
+    row.querySelector('.combo-row-head span').textContent='Sélection '+(i+1);
+  });
+}
+function updateComboCote(){
+  const cotes=[...document.querySelectorAll('#comboList .combo-cote')].map(i=>parseFloat(i.value)).filter(v=>!isNaN(v)&&v>=1);
+  const result=document.getElementById('comboCoteResult');
+  if(cotes.length===0){result.textContent='—';return;}
+  const product=cotes.reduce((a,b)=>a*b,1);
+  result.textContent=(Math.round(product*1000)/1000).toFixed(3);
+}
+function resetBetForm(){
+  document.getElementById('comboList').innerHTML='';
+  setBetType('simple',document.getElementById('betTypeSimple'));
+}
 function addBet(){
   const seqSel=document.getElementById('fSeq').value;
-  const sport=document.getElementById('fSport').value;
-  const match=document.getElementById('fMatch').value.trim();
-  const prono=document.getElementById('fProno').value.trim();
-  const cote=parseFloat(document.getElementById('fCote').value);
   const mise=parseFloat(document.getElementById('fMise').value);
-  if(!match||isNaN(cote)||cote<1||isNaN(mise)||mise<=0){showToast('⚠ Remplis tous les champs.','#ef4444');return;}
+  let sport,match,prono,cote,type='simple',combo=null;
+
+  if(betType==='combine'){
+    const rows=[...document.querySelectorAll('#comboList .combo-row')].map(row=>({
+      sport: row.querySelector('.combo-sport').value,
+      match: row.querySelector('.combo-match').value.trim(),
+      prono: row.querySelector('.combo-prono').value.trim(),
+      cote: parseFloat(row.querySelector('.combo-cote').value),
+    }));
+    if(rows.length<2){showToast('⚠ Ajoute au moins 2 sélections pour un combiné.','#ef4444');return;}
+    if(rows.some(r=>!r.match||isNaN(r.cote)||r.cote<1)){showToast('⚠ Complète chaque sélection (match + cote).','#ef4444');return;}
+    if(isNaN(mise)||mise<=0){showToast('⚠ Renseigne la mise.','#ef4444');return;}
+    cote=Math.round(rows.reduce((a,r)=>a*r.cote,1)*1000)/1000;
+    match=rows.map(r=>r.match).join(' + ');
+    prono=rows.map(r=>r.prono).filter(Boolean).join(' + ');
+    const sports=[...new Set(rows.map(r=>r.sport))];
+    sport=sports.length===1?sports[0]:'Combiné';
+    type='combine';combo=rows;
+  }else{
+    sport=document.getElementById('fSport').value;
+    match=document.getElementById('fMatch').value.trim();
+    prono=document.getElementById('fProno').value.trim();
+    cote=parseFloat(document.getElementById('fCote').value);
+    if(!match||isNaN(cote)||cote<1||isNaN(mise)||mise<=0){showToast('⚠ Remplis tous les champs.','#ef4444');return;}
+  }
+
   let seq;
   if(seqSel==='new'){seq={id:Date.now(),bets:[]};state.sequences.push(seq);}
   else{seq=state.sequences.find(s=>s.id===parseInt(seqSel));if(!seq){showToast('Séquence introuvable.','#ef4444');return;}}
   const palier=seqSel==='new'?1:nextPalierForSeq(seq);
-  const bet={id:Date.now()+Math.floor(Math.random()*1000),sport,match,prono,cote,palier,mise,status:'En cours',gain:0,bkAfter:currentBK(),cashoutGain:null,date:new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})};
+  const bet={id:Date.now()+Math.floor(Math.random()*1000),sport,match,prono,cote,palier,mise,status:'En cours',gain:0,bkAfter:currentBK(),cashoutGain:null,type,combo,date:new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})};
   seq.bets.push(bet);
   recomputeBK();save();render();
   // Sheets sync
@@ -857,6 +975,7 @@ function addBet(){
   document.getElementById('fMatch').value='';
   document.getElementById('fProno').value='';
   document.getElementById('fCote').value='';
+  resetBetForm();
   updateFormSeqSelect();
   showToast('✅ Pari enregistré !','#22c55e');
   goPage('suivi',document.getElementById('bnav-suivi'));
@@ -868,7 +987,7 @@ function addBet(){
 function resolveBet(betId,status){
   const {seq,bet}=findBet(betId);if(!bet)return;
   if(status==='Cashout'){
-    const val=prompt('Gain net cashout (€) :');if(val===null)return;
+    const val=prompt('Montant reçu au cashout (€) :');if(val===null)return;
     bet.cashoutGain=parseFloat(val.replace(',','.'));
     if(isNaN(bet.cashoutGain)){showToast('Valeur invalide.','#ef4444');return;}
   }
@@ -1073,15 +1192,19 @@ function renderSequences(){
            <button class="btn-sm btn-del"  onclick="deleteBet(${b.id})">🗑</button>`
         :`<button class="btn-sm btn-edit" onclick="openEdit(${b.id})">✏️ Modifier</button>
            <button class="btn-sm btn-del"  onclick="deleteBet(${b.id})">🗑</button>`;
+      const comboBadge=b.type==='combine'?'<span class="combo-badge">🔗 Combiné</span>':'';
+      const comboDetail=(b.type==='combine'&&Array.isArray(b.combo))?`<div class="combo-list">${b.combo.map(c=>`<div class="combo-item"><span>${c.match}</span><span>@${(c.cote||0).toFixed(2)}</span></div>`).join('')}</div>`:'';
       return `<div class="seq-step${isChild?' child':''}">
         <div class="step-top">
           <span class="step-pal ${pc}">${b.palier}</span>
+          ${comboBadge}
           <span class="step-match" title="${b.match}">${b.match}</span>
           ${sMap[b.status]||b.status}
         </div>
         <div class="step-meta">${b.sport} · ${b.date}${b.prono?' · '+b.prono.substring(0,28):''}</div>
+        ${comboDetail}
         <div class="step-nums">
-          <span class="step-cote">Cote ${b.cote.toFixed(2)}</span>
+          <span class="step-cote">Cote ${b.type==='combine'?b.cote.toFixed(3):b.cote.toFixed(2)}</span>
           <span class="step-mise">Mise ${b.mise.toFixed(2)} €</span>
           <span class="step-gain ${gainCls}">${gainStr}</span>
         </div>

@@ -210,6 +210,7 @@ body{font-family:-apple-system,'Segoe UI',system-ui,sans-serif;background:var(--
 .p5{background:rgba(239,68,68,.15);color:#ef4444;}
 .p6{background:rgba(167,139,250,.15);color:#a78bfa;}
 .step-match{font-size:0.82rem;font-weight:600;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.step-prono{font-size:0.92rem;font-weight:700;color:var(--accent2);margin:2px 0 4px;line-height:1.3;}
 .step-meta{font-size:0.65rem;color:var(--muted);margin-bottom:6px;}
 .step-nums{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
 .step-cote{font-size:0.78rem;font-weight:600;color:var(--accent2);}
@@ -301,6 +302,16 @@ body{font-family:-apple-system,'Segoe UI',system-ui,sans-serif;background:var(--
 .combo-list{margin:4px 0 2px;padding-left:8px;border-left:2px solid var(--border2);display:flex;flex-direction:column;gap:2px;}
 .combo-item{display:flex;justify-content:space-between;font-size:0.7rem;color:var(--muted);gap:8px;}
 .combo-item span:last-child{color:var(--text);font-variant-numeric:tabular-nums;flex-shrink:0;}
+.step-note{font-size:0.7rem;color:var(--muted);font-style:italic;margin:-2px 0 6px;}
+.goal-bar-wrap{background:var(--surface);border:1px solid var(--border);border-radius:999px;height:14px;overflow:hidden;margin-bottom:8px;}
+.goal-bar-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--win));border-radius:999px;transition:width .4s ease;}
+.goal-bar-labels{display:flex;justify-content:space-between;font-size:0.72rem;color:var(--muted);font-variant-numeric:tabular-nums;}
+.recap-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid var(--faint);}
+.recap-row:last-child{border-bottom:none;}
+.recap-month{font-size:0.8rem;font-weight:700;min-width:78px;text-transform:capitalize;}
+.recap-mid{flex:1;font-size:0.68rem;color:var(--muted);text-align:center;}
+.recap-gain{font-size:0.82rem;font-weight:700;font-variant-numeric:tabular-nums;text-align:right;min-width:70px;}
+.edit-details-toggle{font-size:0.75rem;color:var(--accent);font-weight:600;cursor:pointer;margin-bottom:12px;display:inline-block;}
 
 /* ── CALENDRIER ── */
 .cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
@@ -402,9 +413,10 @@ body{font-family:-apple-system,'Segoe UI',system-ui,sans-serif;background:var(--
     </div>
 
     <!-- Paliers -->
-    <div class="card">
+    <div class="card" id="palierGridCard">
       <div class="card-title">Paliers (BK actuelle)</div>
       <div class="palier-grid" id="palierGrid"></div>
+      <div class="seq-hint" id="palierNextThreshold" style="margin-top:10px;"></div>
     </div>
 
     <div id="seqTree">
@@ -417,12 +429,14 @@ body{font-family:-apple-system,'Segoe UI',system-ui,sans-serif;background:var(--
     <div class="card form-page">
       <div class="card-title">Nouveau pari</div>
 
-      <div class="form-row">
-        <label>Séquence</label>
-        <select id="fSeq" onchange="onSeqChange()">
-          <option value="new">➕ Nouvelle séquence (P1)</option>
-        </select>
-        <div class="seq-hint" id="seqHint">Démarre une nouvelle séquence indépendante.</div>
+      <div id="martingaleSeqWrap">
+        <div class="form-row">
+          <label>Séquence</label>
+          <select id="fSeq" onchange="onSeqChange()">
+            <option value="new">➕ Nouvelle séquence (P1)</option>
+          </select>
+          <div class="seq-hint" id="seqHint">Démarre une nouvelle séquence indépendante.</div>
+        </div>
       </div>
 
       <div class="form-row">
@@ -439,7 +453,8 @@ body{font-family:-apple-system,'Segoe UI',system-ui,sans-serif;background:var(--
           <select id="fSport">
             <option>Football</option><option>Tennis</option><option>Basketball</option>
             <option>Hockey</option><option>Badminton</option><option>Tennis de table</option>
-            <option>Volleyball</option><option>Foot américain</option><option>Rugby</option><option>Autre</option>
+            <option>Volleyball</option><option>Foot américain</option><option>Rugby</option>
+            <option>Baseball</option><option>Snooker</option><option>Autre</option>
           </select>
         </div>
 
@@ -469,10 +484,23 @@ body{font-family:-apple-system,'Segoe UI',system-ui,sans-serif;background:var(--
       </div>
 
       <div class="form-row">
-        <label>Mise suggérée</label>
-        <div class="mise-info">
-          <span class="mise-mv" id="miseSuggLabel">—</span>
-          <span class="mise-ms" id="miseSuggInfo"></span>
+        <label>Bookmaker (optionnel)</label>
+        <input type="text" id="fBookmaker" placeholder="ex: Betclic, Winamax…" autocomplete="off" list="bookmakerList">
+        <datalist id="bookmakerList"></datalist>
+      </div>
+
+      <div class="form-row">
+        <label>Note (optionnel)</label>
+        <input type="text" id="fNote" placeholder="ex: value bet, tuyau, doute sur la compo…" autocomplete="off">
+      </div>
+
+      <div id="martingaleMiseSuggWrap">
+        <div class="form-row">
+          <label>Mise suggérée</label>
+          <div class="mise-info">
+            <span class="mise-mv" id="miseSuggLabel">—</span>
+            <span class="mise-ms" id="miseSuggInfo"></span>
+          </div>
         </div>
       </div>
 
@@ -511,9 +539,25 @@ body{font-family:-apple-system,'Segoe UI',system-ui,sans-serif;background:var(--
         <div class="kpi-sub" id="sKNb">0 paris</div>
       </div>
       <div class="kpi gold">
-        <div class="kpi-label">Séquences</div>
+        <div class="kpi-label" id="sKSeqLabel">Séquences</div>
         <div class="kpi-value" id="sKSeq">0</div>
         <div class="kpi-sub" id="sKSeqSub">—</div>
+      </div>
+      <div class="kpi red">
+        <div class="kpi-label">Drawdown max</div>
+        <div class="kpi-value" id="sKDrawdown">—</div>
+        <div class="kpi-sub" id="sKDrawdownPct">—</div>
+      </div>
+    </div>
+
+    <!-- Objectif de bankroll -->
+    <div class="card" id="bkGoalCard" style="display:none;">
+      <div class="card-title">🎯 Objectif de bankroll</div>
+      <div class="goal-bar-wrap"><div class="goal-bar-fill" id="goalBarFill" style="width:0%;"></div></div>
+      <div class="goal-bar-labels">
+        <span id="goalCurrentLabel">0 €</span>
+        <span id="goalPctLabel">0 %</span>
+        <span id="goalTargetLabel">0 €</span>
       </div>
     </div>
 
@@ -532,6 +576,7 @@ body{font-family:-apple-system,'Segoe UI',system-ui,sans-serif;background:var(--
           <div class="ctab active" onclick="switchTab('bk',this)">BK</div>
           <div class="ctab" onclick="switchTab('gain',this)">Gains</div>
           <div class="ctab" onclick="switchTab('cumul',this)">Cumulatif</div>
+          <div class="ctab" onclick="switchTab('drawdown',this)">Drawdown</div>
         </div>
       </div>
       <canvas id="mainChart" height="130"></canvas>
@@ -550,6 +595,18 @@ body{font-family:-apple-system,'Segoe UI',system-ui,sans-serif;background:var(--
     <div class="card">
       <div class="card-title">Par sport</div>
       <div class="stat-bar-wrap" id="sportBars"></div>
+    </div>
+
+    <!-- Bookmakers -->
+    <div class="card" id="bookmakerCard" style="display:none;">
+      <div class="card-title">Par bookmaker</div>
+      <div class="stat-bar-wrap" id="bookmakerBars"></div>
+    </div>
+
+    <!-- Récap mensuel -->
+    <div class="card">
+      <div class="card-title">📅 Récap mensuel</div>
+      <div id="monthlyRecap"></div>
     </div>
 
     <!-- Séries -->
@@ -619,6 +676,45 @@ body{font-family:-apple-system,'Segoe UI',system-ui,sans-serif;background:var(--
     <div class="modal-handle"></div>
     <div class="modal-title">✏️ Modifier le résultat</div>
     <div class="modal-sub" id="editMatchLabel"></div>
+
+    <div class="edit-details-toggle" id="editDetailsToggle" onclick="toggleEditDetails()">✏️ Modifier les détails du pari ▾</div>
+    <div id="editDetailsWrap" style="display:none;">
+      <div id="editSimpleFields">
+        <div class="form-row">
+          <label>Sport</label>
+          <select id="editSport"></select>
+        </div>
+        <div class="form-row">
+          <label>Match / Événement</label>
+          <input type="text" id="editMatch" autocomplete="off">
+        </div>
+        <div class="form-row">
+          <label>Pronostic</label>
+          <input type="text" id="editProno" autocomplete="off">
+        </div>
+        <div class="form-row">
+          <label>Cote</label>
+          <input type="number" id="editCote" step="0.01" min="1.01" inputmode="decimal">
+        </div>
+      </div>
+      <div id="editComboFields" style="display:none;">
+        <div id="editComboList"></div>
+        <button type="button" class="btn btn-ghost" style="width:100%;padding:9px;font-size:0.8rem;margin-bottom:10px;" onclick="addComboRow('editComboList','editComboCoteResult')">＋ Ajouter une sélection</button>
+        <div class="combo-total-row">
+          <span>Cote combinée</span>
+          <span id="editComboCoteResult">—</span>
+        </div>
+      </div>
+      <div class="form-row">
+        <label>Mise réelle (€)</label>
+        <input type="number" id="editMise" step="0.01" min="0.01" inputmode="decimal">
+      </div>
+      <div class="form-row">
+        <label>Bookmaker (optionnel)</label>
+        <input type="text" id="editBookmaker" autocomplete="off" list="bookmakerList">
+      </div>
+    </div>
+
     <div class="result-picker">
       <div class="rpick r-win"     onclick="selectResult('Gagné',this)">✅ Gagné</div>
       <div class="rpick r-loss"    onclick="selectResult('Perdu',this)">❌ Perdu</div>
@@ -630,6 +726,10 @@ body{font-family:-apple-system,'Segoe UI',system-ui,sans-serif;background:var(--
       <input type="number" id="editCashoutVal" step="0.01" placeholder="ex: 12.00" inputmode="decimal"
         style="width:100%;background:var(--surface);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-size:1rem;padding:10px 12px;outline:none;margin-top:5px;">
       <div style="font-size:0.68rem;color:var(--muted);margin-top:5px;">Le gain/perte net est calculé automatiquement : montant reçu − mise.</div>
+    </div>
+    <div class="form-row" style="margin-top:12px;">
+      <label>Note</label>
+      <input type="text" id="editNoteVal" placeholder="ex: value bet, tuyau…" autocomplete="off">
     </div>
     <div class="modal-actions">
       <button class="btn btn-primary" style="flex:1;" onclick="saveEdit()">Enregistrer</button>
@@ -645,22 +745,47 @@ body{font-family:-apple-system,'Segoe UI',system-ui,sans-serif;background:var(--
     <div class="modal-title">⚙️ Paramètres</div>
     <div class="modal-sub">La mise P1 s'adapte automatiquement à la BK courante.</div>
     <div class="form-row">
+      <label>Mode de gestion de bankroll</label>
+      <select id="setBkMode" onchange="onBkModeChange()">
+        <option value="martingale">Martingale (paliers)</option>
+        <option value="standard">Standard (paris indépendants)</option>
+      </select>
+    </div>
+    <div class="form-row">
       <label id="bkStartLabel">Bankroll de départ (€)</label>
       <input type="number" id="setBKStart" step="0.01" min="1" inputmode="decimal">
       <div class="seq-hint" id="bkStartHint" style="display:none;">Calculée automatiquement à partir du total des participants ci-dessous.</div>
     </div>
-    <div class="form-row">
-      <label>Multiplicateur (défaut : 4)</label>
-      <input type="number" id="setMulti" step="0.5" min="2" inputmode="decimal">
+    <div id="martingaleParamsWrap">
+      <div class="form-row">
+        <label>Multiplicateur (défaut : 4)</label>
+        <input type="number" id="setMulti" step="0.5" min="2" inputmode="decimal">
+      </div>
+      <div class="form-row">
+        <label>Nombre de paliers (défaut : 6)</label>
+        <input type="number" id="setNbPaliers" step="1" min="2" max="10" inputmode="numeric">
+      </div>
     </div>
-    <div class="form-row">
-      <label>Nombre de paliers (défaut : 6)</label>
-      <input type="number" id="setNbPaliers" step="1" min="2" max="10" inputmode="numeric">
+
+    <!-- OBJECTIFS & LIMITES -->
+    <div style="border-top:1px solid var(--border);margin:14px 0 12px;padding-top:12px;">
+      <div style="font-size:0.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">
+        🎯 Objectifs & limites
+      </div>
+      <div class="form-row" style="margin-bottom:8px;">
+        <label>Objectif de bankroll (€, optionnel)</label>
+        <input type="number" id="setBkGoal" step="1" min="0" placeholder="ex: 500" inputmode="decimal">
+      </div>
+      <div class="form-row" style="margin-bottom:0;">
+        <label>Limite de perte quotidienne (€, optionnel)</label>
+        <input type="number" id="setDailyLossLimit" step="1" min="0" placeholder="ex: 50" inputmode="decimal">
+        <div class="seq-hint">Une alerte apparaît dans Stats si tes pertes du jour dépassent ce montant.</div>
+      </div>
     </div>
 
     <!-- PARTICIPANTS SECTION -->
     <div style="border-top:1px solid var(--border);margin:14px 0 12px;padding-top:12px;">
-      <div style="font-size:0.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">
+      <div style="font-size:0.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;" id="participantsSectionTitle">
         👥 Martingale participative
       </div>
       <div id="participantsList"></div>
@@ -739,7 +864,7 @@ body{font-family:-apple-system,'Segoe UI',system-ui,sans-serif;background:var(--
 // ═══════════════════════════
 //  STATE
 // ═══════════════════════════
-let state={bkStart:35,multiplier:4,nbPaliers:6,sequences:[],participants:[]};
+let state={bkStart:35,multiplier:4,nbPaliers:6,bkMode:'martingale',bkGoal:0,dailyLossLimit:0,sequences:[],participants:[]};
 let editingBetId=null, editSelectedResult=null;
 let settingsParticipants=[];
 let chartInstance=null, pieInstance=null, chartMode='bk';
@@ -796,10 +921,13 @@ async function pullFirebaseState(){
     if(!r.ok) throw new Error('http '+r.status);
     const data=await r.json();
     if(!data || typeof data!=='object') throw new Error('empty');
-    state={bkStart:35,multiplier:4,nbPaliers:6,sequences:[],participants:[],...data};
+    state={bkStart:35,multiplier:4,nbPaliers:6,bkMode:'martingale',bkGoal:0,dailyLossLimit:0,sequences:[],participants:[],...data};
     localStorage.setItem('pronosTracker3',JSON.stringify(state));
     setFirebaseSyncDot('ok');
     showToast('🟢 Données importées avec succès.','#22c55e');
+    applyBkModeUI();
+    recomputeBK();
+    updateFormSeqSelect();
     render();
   }catch(e){ showToast('🔴 Échec de l\'import — vérifie l\'adresse de la base.','#ef4444'); }
 }
@@ -877,23 +1005,24 @@ function setBetType(type,el){
     addComboRow();addComboRow();
   }
 }
-function addComboRow(){
+const SPORT_OPTIONS_HTML=`<option>Football</option><option>Tennis</option><option>Basketball</option>
+        <option>Hockey</option><option>Badminton</option><option>Tennis de table</option>
+        <option>Volleyball</option><option>Foot américain</option><option>Rugby</option>
+        <option>Baseball</option><option>Snooker</option><option>Autre</option>`;
+function addComboRow(listId,resultId){
+  listId=listId||'comboList';resultId=resultId||'comboCoteResult';
   const id=++comboRowIdSeq;
-  const list=document.getElementById('comboList');
+  const list=document.getElementById(listId);
   const div=document.createElement('div');
   div.className='combo-row';
   div.dataset.id=id;
   div.innerHTML=`
     <div class="combo-row-head">
       <span>Sélection</span>
-      <button type="button" class="combo-row-del" onclick="removeComboRow(${id})">🗑</button>
+      <button type="button" class="combo-row-del" onclick="removeComboRow(${id},'${listId}','${resultId}')">🗑</button>
     </div>
     <div class="form-row" style="margin-bottom:6px;">
-      <select class="combo-sport">
-        <option>Football</option><option>Tennis</option><option>Basketball</option>
-        <option>Hockey</option><option>Badminton</option><option>Tennis de table</option>
-        <option>Volleyball</option><option>Foot américain</option><option>Rugby</option><option>Autre</option>
-      </select>
+      <select class="combo-sport">${SPORT_OPTIONS_HTML}</select>
     </div>
     <div class="form-row" style="margin-bottom:6px;">
       <input type="text" class="combo-match" placeholder="Match / Événement" autocomplete="off">
@@ -902,39 +1031,59 @@ function addComboRow(){
       <input type="text" class="combo-prono" placeholder="Pronostic (optionnel)" autocomplete="off">
     </div>
     <div class="form-row" style="margin-bottom:0;">
-      <input type="number" class="combo-cote" step="0.01" min="1.01" placeholder="Cote" inputmode="decimal" oninput="updateComboCote()">
+      <input type="number" class="combo-cote" step="0.01" min="1.01" placeholder="Cote" inputmode="decimal" oninput="updateComboCote('${listId}','${resultId}')">
     </div>`;
   list.appendChild(div);
-  updateComboRowLabels();
-  updateComboCote();
+  updateComboRowLabels(listId);
+  updateComboCote(listId,resultId);
 }
-function removeComboRow(id){
-  const list=document.getElementById('comboList');
+function removeComboRow(id,listId,resultId){
+  listId=listId||'comboList';resultId=resultId||'comboCoteResult';
+  const list=document.getElementById(listId);
   const row=list.querySelector(`.combo-row[data-id="${id}"]`);
   if(row)row.remove();
-  if(list.children.length===0){addComboRow();addComboRow();return;}
-  updateComboRowLabels();
-  updateComboCote();
+  if(list.children.length===0){addComboRow(listId,resultId);addComboRow(listId,resultId);return;}
+  updateComboRowLabels(listId);
+  updateComboCote(listId,resultId);
 }
-function updateComboRowLabels(){
-  document.querySelectorAll('#comboList .combo-row').forEach((row,i)=>{
+function updateComboRowLabels(listId){
+  listId=listId||'comboList';
+  document.querySelectorAll('#'+listId+' .combo-row').forEach((row,i)=>{
     row.querySelector('.combo-row-head span').textContent='Sélection '+(i+1);
   });
 }
-function updateComboCote(){
-  const cotes=[...document.querySelectorAll('#comboList .combo-cote')].map(i=>parseFloat(i.value)).filter(v=>!isNaN(v)&&v>=1);
-  const result=document.getElementById('comboCoteResult');
+function updateComboCote(listId,resultId){
+  listId=listId||'comboList';resultId=resultId||'comboCoteResult';
+  const cotes=[...document.querySelectorAll('#'+listId+' .combo-cote')].map(i=>parseFloat(i.value)).filter(v=>!isNaN(v)&&v>=1);
+  const result=document.getElementById(resultId);
   if(cotes.length===0){result.textContent='—';return;}
   const product=cotes.reduce((a,b)=>a*b,1);
   result.textContent=(Math.round(product*1000)/1000).toFixed(3);
 }
+function fillComboRow(row,data){
+  row.querySelector('.combo-sport').value=data.sport||'Football';
+  row.querySelector('.combo-match').value=data.match||'';
+  row.querySelector('.combo-prono').value=data.prono||'';
+  row.querySelector('.combo-cote').value=data.cote||'';
+}
 function resetBetForm(){
   document.getElementById('comboList').innerHTML='';
   setBetType('simple',document.getElementById('betTypeSimple'));
+  if(state.bkMode==='standard')document.getElementById('fMise').value='';
+  document.getElementById('fBookmaker').value='';
+  document.getElementById('fNote').value='';
+}
+function updateBookmakerList(){
+  const dl=document.getElementById('bookmakerList');
+  if(!dl)return;
+  const names=[...new Set(allBets().map(b=>b.bookmaker).filter(Boolean))].sort();
+  dl.innerHTML=names.map(n=>`<option value="${n}"></option>`).join('');
 }
 function addBet(){
   const seqSel=document.getElementById('fSeq').value;
   const mise=parseFloat(document.getElementById('fMise').value);
+  const bookmaker=document.getElementById('fBookmaker').value.trim();
+  const note=document.getElementById('fNote').value.trim();
   let sport,match,prono,cote,type='simple',combo=null;
 
   if(betType==='combine'){
@@ -961,11 +1110,16 @@ function addBet(){
     if(!match||isNaN(cote)||cote<1||isNaN(mise)||mise<=0){showToast('⚠ Remplis tous les champs.','#ef4444');return;}
   }
 
-  let seq;
-  if(seqSel==='new'){seq={id:Date.now(),bets:[]};state.sequences.push(seq);}
-  else{seq=state.sequences.find(s=>s.id===parseInt(seqSel));if(!seq){showToast('Séquence introuvable.','#ef4444');return;}}
-  const palier=seqSel==='new'?1:nextPalierForSeq(seq);
-  const bet={id:Date.now()+Math.floor(Math.random()*1000),sport,match,prono,cote,palier,mise,status:'En cours',gain:0,bkAfter:currentBK(),cashoutGain:null,type,combo,date:new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})};
+  let seq,palier;
+  if(state.bkMode==='standard'){
+    seq={id:Date.now(),bets:[]};state.sequences.push(seq);palier=1;
+  }else if(seqSel==='new'){
+    seq={id:Date.now(),bets:[]};state.sequences.push(seq);palier=1;
+  }else{
+    seq=state.sequences.find(s=>s.id===parseInt(seqSel));if(!seq){showToast('Séquence introuvable.','#ef4444');return;}
+    palier=nextPalierForSeq(seq);
+  }
+  const bet={id:Date.now()+Math.floor(Math.random()*1000),sport,match,prono,cote,palier,mise,status:'En cours',gain:0,bkAfter:currentBK(),cashoutGain:null,type,combo,bookmaker,note,date:new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})};
   seq.bets.push(bet);
   recomputeBK();save();render();
   // Sheets sync
@@ -1011,6 +1165,13 @@ function findBet(betId){for(const seq of state.sequences){const bet=seq.bets.fin
 // ═══════════════════════════
 //  EDIT MODAL
 // ═══════════════════════════
+function toggleEditDetails(){
+  const wrap=document.getElementById('editDetailsWrap');
+  const toggle=document.getElementById('editDetailsToggle');
+  const open=wrap.style.display==='none';
+  wrap.style.display=open?'':'none';
+  toggle.textContent='✏️ Modifier les détails du pari '+(open?'▴':'▾');
+}
 function openEdit(betId){
   const{bet}=findBet(betId);if(!bet)return;
   editingBetId=betId;editSelectedResult=bet.status;
@@ -1021,6 +1182,35 @@ function openEdit(betId){
   const cw=document.getElementById('cashoutWrap');
   if(bet.status==='Cashout'){cw.classList.add('show');document.getElementById('editCashoutVal').value=bet.cashoutGain??'';}
   else{cw.classList.remove('show');document.getElementById('editCashoutVal').value='';}
+  document.getElementById('editNoteVal').value=bet.note||'';
+  updateBookmakerList();
+
+  // Collapse details section by default each time the modal opens
+  document.getElementById('editDetailsWrap').style.display='none';
+  document.getElementById('editDetailsToggle').textContent='✏️ Modifier les détails du pari ▾';
+
+  // Pre-fill editable bet details
+  document.getElementById('editMise').value=bet.mise;
+  document.getElementById('editBookmaker').value=bet.bookmaker||'';
+  if(bet.type==='combine'){
+    document.getElementById('editSimpleFields').style.display='none';
+    document.getElementById('editComboFields').style.display='';
+    const list=document.getElementById('editComboList');
+    list.innerHTML='';
+    (bet.combo||[]).forEach(sel=>{
+      addComboRow('editComboList','editComboCoteResult');
+      const row=list.lastElementChild;
+      fillComboRow(row,sel);
+    });
+    updateComboCote('editComboList','editComboCoteResult');
+  }else{
+    document.getElementById('editComboFields').style.display='none';
+    document.getElementById('editSimpleFields').style.display='';
+    document.getElementById('editSport').value=bet.sport;
+    document.getElementById('editMatch').value=bet.match;
+    document.getElementById('editProno').value=bet.prono||'';
+    document.getElementById('editCote').value=bet.cote;
+  }
   document.getElementById('modalEdit').classList.add('open');
 }
 function selectResult(r,el){
@@ -1033,15 +1223,47 @@ function selectResult(r,el){
 function saveEdit(){
   if(!editingBetId||!editSelectedResult)return;
   const{bet}=findBet(editingBetId);if(!bet)return;
+
+  const mise=parseFloat(document.getElementById('editMise').value);
+  if(isNaN(mise)||mise<=0){showToast('⚠ Mise invalide.','#ef4444');return;}
+  const bookmaker=document.getElementById('editBookmaker').value.trim();
+
+  if(bet.type==='combine'){
+    const rows=[...document.querySelectorAll('#editComboList .combo-row')].map(row=>({
+      sport: row.querySelector('.combo-sport').value,
+      match: row.querySelector('.combo-match').value.trim(),
+      prono: row.querySelector('.combo-prono').value.trim(),
+      cote: parseFloat(row.querySelector('.combo-cote').value),
+    }));
+    if(rows.length<2){showToast('⚠ Ajoute au moins 2 sélections pour un combiné.','#ef4444');return;}
+    if(rows.some(r=>!r.match||isNaN(r.cote)||r.cote<1)){showToast('⚠ Complète chaque sélection (match + cote).','#ef4444');return;}
+    bet.cote=Math.round(rows.reduce((a,r)=>a*r.cote,1)*1000)/1000;
+    bet.match=rows.map(r=>r.match).join(' + ');
+    bet.prono=rows.map(r=>r.prono).filter(Boolean).join(' + ');
+    const sports=[...new Set(rows.map(r=>r.sport))];
+    bet.sport=sports.length===1?sports[0]:'Combiné';
+    bet.combo=rows;
+  }else{
+    const sport=document.getElementById('editSport').value;
+    const match=document.getElementById('editMatch').value.trim();
+    const prono=document.getElementById('editProno').value.trim();
+    const cote=parseFloat(document.getElementById('editCote').value);
+    if(!match||isNaN(cote)||cote<1){showToast('⚠ Vérifie le match et la cote.','#ef4444');return;}
+    bet.sport=sport;bet.match=match;bet.prono=prono;bet.cote=cote;
+  }
+  bet.mise=mise;
+  bet.bookmaker=bookmaker;
+
   if(editSelectedResult==='Cashout'){
     const val=parseFloat(document.getElementById('editCashoutVal').value.replace(',','.'));
     if(isNaN(val)){showToast('Saisis le montant cashout.','#ef4444');return;}
     bet.cashoutGain=val;
   }else{bet.cashoutGain=null;}
   bet.status=editSelectedResult;
+  bet.note=document.getElementById('editNoteVal').value.trim();
   recomputeBK();save();closeEdit();render();updateFormSeqSelect();
   syncUpdateBet(bet);
-  showToast('✏️ Résultat mis à jour.','#4f6ef7');
+  showToast('✏️ Pari mis à jour.','#4f6ef7');
 }
 function closeEdit(){editingBetId=null;editSelectedResult=null;document.getElementById('modalEdit').classList.remove('open');}
 
@@ -1065,6 +1287,7 @@ function updateFormSeqSelect(){
   onSeqChange();
 }
 function onSeqChange(){
+  if(state.bkMode==='standard')return;
   const v=document.getElementById('fSeq').value;
   const bk=currentBK();
   const mises=getMises(bk),cumuls=getCumuls(bk);
@@ -1125,11 +1348,35 @@ function computeStats(){
   }
   const sportMap={};
   for(const b of resolved){if(!sportMap[b.sport])sportMap[b.sport]={won:0,total:0};sportMap[b.sport].total++;if(b.status==='Gagné')sportMap[b.sport].won++;}
+  const bookmakerMap={};
+  for(const b of resolved){if(!b.bookmaker)continue;if(!bookmakerMap[b.bookmaker])bookmakerMap[b.bookmaker]={won:0,total:0};bookmakerMap[b.bookmaker].total++;if(b.status==='Gagné')bookmakerMap[b.bookmaker].won++;}
   const seqs=state.sequences;
   const seqWon=seqs.filter(s=>seqStatus(s)==='won').length;
   const seqLost=seqs.filter(s=>seqStatus(s)==='lost').length;
   const seqOpen=seqs.filter(s=>seqStatus(s)==='open').length;
-  return{bk,benef,roi,winRate,totalMise,coteMoy,won:won.length,lost:lost.length,cash:cash.length,pending:pending.length,total:resolved.length,maxWin,maxLoss,streak,streakType,sportMap,seqs,seqWon,seqLost,seqOpen};
+
+  // Drawdown: walk resolved bets chronologically, track distance from running peak BK
+  let peak=state.bkStart,maxDD=0,maxDDPct=0;
+  for(const b of [...resolved].sort((a,x)=>a.id-x.id)){
+    if(b.bkAfter>peak)peak=b.bkAfter;
+    const dd=peak-b.bkAfter;
+    if(dd>maxDD){maxDD=dd;maxDDPct=peak>0?dd/peak*100:0;}
+  }
+
+  // Monthly recap (grouped by real bet timestamp, not the display date string)
+  const monthMap={};
+  for(const b of resolved){
+    const d=new Date(b.id);
+    const key=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+    if(!monthMap[key])monthMap[key]={key,year:d.getFullYear(),month:d.getMonth(),total:0,won:0,gain:0,mise:0};
+    monthMap[key].total++;
+    if(b.status==='Gagné')monthMap[key].won++;
+    monthMap[key].gain+=b.gain;
+    monthMap[key].mise+=b.mise;
+  }
+  const monthly=Object.values(monthMap).sort((a,x)=>x.key.localeCompare(a.key));
+
+  return{bk,benef,roi,winRate,totalMise,coteMoy,won:won.length,lost:lost.length,cash:cash.length,pending:pending.length,total:resolved.length,maxWin,maxLoss,streak,streakType,sportMap,bookmakerMap,seqs,seqWon,seqLost,seqOpen,maxDD,maxDDPct,monthly};
 }
 
 // ═══════════════════════════
@@ -1150,8 +1397,61 @@ function renderTopbar(s){
   d.className='bk-delta '+(s.benef>=0?'pos':'neg');
 }
 
+const seqSMap={
+  'Gagné':'<span class="status-badge s-win">✅ Gagné</span>',
+  'Perdu':'<span class="status-badge s-loss">❌ Perdu</span>',
+  'Cashout':'<span class="status-badge s-cashout">💸 Cashout</span>',
+  'En cours':'<span class="status-badge s-pending">⏳ En cours</span>',
+};
+const seqPalC=['p1','p2','p3','p4','p5','p6'];
+function betStepInner(b,showPalier){
+  const gainStr=b.status==='En cours'?'—':(b.gain>=0?'+':'')+b.gain.toFixed(2)+' €';
+  const gainCls=b.gain>=0?'pos':'neg';
+  const actions=b.status==='En cours'
+    ?`<button class="btn-sm btn-win"  onclick="resolveBet(${b.id},'Gagné')">✅ Gagné</button>
+       <button class="btn-sm btn-loss" onclick="resolveBet(${b.id},'Perdu')">❌ Perdu</button>
+       <button class="btn-sm btn-cash" onclick="resolveBet(${b.id},'Cashout')">💸</button>
+       <button class="btn-sm btn-edit" onclick="openEdit(${b.id})">✏️</button>
+       <button class="btn-sm btn-del"  onclick="deleteBet(${b.id})">🗑</button>`
+    :`<button class="btn-sm btn-edit" onclick="openEdit(${b.id})">✏️ Modifier</button>
+       <button class="btn-sm btn-del"  onclick="deleteBet(${b.id})">🗑</button>`;
+  const comboBadge=b.type==='combine'?'<span class="combo-badge">🔗 Combiné</span>':'';
+  const comboDetail=(b.type==='combine'&&Array.isArray(b.combo))?`<div class="combo-list">${b.combo.map(c=>`<div class="combo-item"><span>${c.match}</span><span>@${(c.cote||0).toFixed(2)}</span></div>`).join('')}</div>`:'';
+  const palBadge=showPalier?`<span class="step-pal ${seqPalC[(b.palier-1)%seqPalC.length]}">${b.palier}</span>`:'';
+  return `<div class="step-top">
+      ${palBadge}
+      ${comboBadge}
+      <span class="step-match" title="${b.match}">${b.match}</span>
+      ${seqSMap[b.status]||b.status}
+    </div>
+    ${b.prono?`<div class="step-prono">🎯 ${b.prono}</div>`:''}
+    <div class="step-meta">${b.sport} · ${b.date}${b.bookmaker?' · 🏦 '+b.bookmaker:''}</div>
+    ${comboDetail}
+    ${b.note?`<div class="step-note">📝 ${b.note}</div>`:''}
+    <div class="step-nums">
+      <span class="step-cote">Cote ${b.type==='combine'?b.cote.toFixed(3):b.cote.toFixed(2)}</span>
+      <span class="step-mise">Mise ${b.mise.toFixed(2)} €</span>
+      <span class="step-gain ${gainCls}">${gainStr}</span>
+    </div>
+    <div class="step-actions">${actions}</div>`;
+}
 function renderSequences(){
   const container=document.getElementById('seqTree');
+  if(state.bkMode==='standard'){
+    const filteredBets=[...allBets()].sort((a,b)=>b.id-a.id).filter(b=>{
+      if(!seqFilter)return true;
+      if(seqFilter==='open')return b.status==='En cours';
+      if(seqFilter==='won')return b.status==='Gagné'||b.status==='Cashout';
+      if(seqFilter==='lost')return b.status==='Perdu';
+      return true;
+    });
+    if(filteredBets.length===0){
+      container.innerHTML=`<div class="empty"><div class="empty-icon">🎲</div>Aucun pari.<br>Appuie sur ＋ pour commencer !</div>`;
+      return;
+    }
+    container.innerHTML=filteredBets.map(b=>`<div class="seq-block"><div class="seq-step">${betStepInner(b,false)}</div></div>`).join('');
+    return;
+  }
   const seqs=[...state.sequences].reverse();
   const filtered=seqs.filter(seq=>{
     const ss=seqStatus(seq);
@@ -1162,16 +1462,9 @@ function renderSequences(){
     return true;
   });
   if(filtered.length===0){
-    container.innerHTML='<div class="empty"><div class="empty-icon">🎲</div>Aucune séquence.<br>Appuie sur ＋ pour commencer !</div>';
+    container.innerHTML=`<div class="empty"><div class="empty-icon">🎲</div>Aucun pari.<br>Appuie sur ＋ pour commencer !</div>`;
     return;
   }
-  const palC=['p1','p2','p3','p4','p5','p6'];
-  const sMap={
-    'Gagné':'<span class="status-badge s-win">✅ Gagné</span>',
-    'Perdu':'<span class="status-badge s-loss">❌ Perdu</span>',
-    'Cashout':'<span class="status-badge s-cashout">💸 Cashout</span>',
-    'En cours':'<span class="status-badge s-pending">⏳ En cours</span>',
-  };
   container.innerHTML=filtered.map(seq=>{
     const ss=seqStatus(seq);
     const ssLabel=ss==='won'?'<span class="seq-badge ss-won">Gagnée ✅</span>':ss==='lost'?'<span class="seq-badge ss-lost">Perdue ❌</span>':'<span class="seq-badge ss-open">En cours ⏳</span>';
@@ -1181,35 +1474,7 @@ function renderSequences(){
     const sortedBets=[...seq.bets].sort((a,b)=>a.id-b.id);
     const stepsHtml=sortedBets.map((b,i)=>{
       const isChild=i>0;
-      const pc=palC[(b.palier-1)%palC.length];
-      const gainStr=b.status==='En cours'?'—':(b.gain>=0?'+':'')+b.gain.toFixed(2)+' €';
-      const gainCls=b.gain>=0?'pos':'neg';
-      const actions=b.status==='En cours'
-        ?`<button class="btn-sm btn-win"  onclick="resolveBet(${b.id},'Gagné')">✅ Gagné</button>
-           <button class="btn-sm btn-loss" onclick="resolveBet(${b.id},'Perdu')">❌ Perdu</button>
-           <button class="btn-sm btn-cash" onclick="resolveBet(${b.id},'Cashout')">💸</button>
-           <button class="btn-sm btn-edit" onclick="openEdit(${b.id})">✏️</button>
-           <button class="btn-sm btn-del"  onclick="deleteBet(${b.id})">🗑</button>`
-        :`<button class="btn-sm btn-edit" onclick="openEdit(${b.id})">✏️ Modifier</button>
-           <button class="btn-sm btn-del"  onclick="deleteBet(${b.id})">🗑</button>`;
-      const comboBadge=b.type==='combine'?'<span class="combo-badge">🔗 Combiné</span>':'';
-      const comboDetail=(b.type==='combine'&&Array.isArray(b.combo))?`<div class="combo-list">${b.combo.map(c=>`<div class="combo-item"><span>${c.match}</span><span>@${(c.cote||0).toFixed(2)}</span></div>`).join('')}</div>`:'';
-      return `<div class="seq-step${isChild?' child':''}">
-        <div class="step-top">
-          <span class="step-pal ${pc}">${b.palier}</span>
-          ${comboBadge}
-          <span class="step-match" title="${b.match}">${b.match}</span>
-          ${sMap[b.status]||b.status}
-        </div>
-        <div class="step-meta">${b.sport} · ${b.date}${b.prono?' · '+b.prono.substring(0,28):''}</div>
-        ${comboDetail}
-        <div class="step-nums">
-          <span class="step-cote">Cote ${b.type==='combine'?b.cote.toFixed(3):b.cote.toFixed(2)}</span>
-          <span class="step-mise">Mise ${b.mise.toFixed(2)} €</span>
-          <span class="step-gain ${gainCls}">${gainStr}</span>
-        </div>
-        <div class="step-actions">${actions}</div>
-      </div>`;
+      return `<div class="seq-step${isChild?' child':''}">${betStepInner(b,true)}</div>`;
     }).join('');
     return `<div class="seq-block">
       <div class="seq-block-header">
@@ -1235,14 +1500,63 @@ function renderStatsPage(s){
   document.getElementById('sKNb').textContent=s.total+' résolus';
   document.getElementById('sKSeq').textContent=s.seqs.length;
   document.getElementById('sKSeqSub').textContent=s.seqWon+'✅ '+s.seqOpen+'⏳ '+s.seqLost+'❌';
+  document.getElementById('sKDrawdown').textContent=s.maxDD>0?'-'+s.maxDD.toFixed(2)+' €':'—';
+  document.getElementById('sKDrawdownPct').textContent=s.maxDD>0?'-'+s.maxDDPct.toFixed(1)+' % du pic':'aucun repli';
 
   renderParticipants(s);
+  renderBkGoal(s);
   renderMainChart(s);
   renderDonut(s);
   renderSportBars(s);
+  renderBookmakerBars(s);
+  renderMonthlyRecap(s);
   renderStreaks(s);
   renderAlerts();
   renderPalierGrid();
+}
+
+function renderBkGoal(s){
+  const card=document.getElementById('bkGoalCard');
+  const goal=state.bkGoal||0;
+  if(goal<=0){card.style.display='none';return;}
+  card.style.display='';
+  const pct=Math.max(0,Math.min(100,s.bk/goal*100));
+  document.getElementById('goalBarFill').style.width=pct+'%';
+  document.getElementById('goalCurrentLabel').textContent=s.bk.toFixed(2)+' €';
+  document.getElementById('goalPctLabel').textContent=(s.bk/goal*100).toFixed(1)+' %';
+  document.getElementById('goalTargetLabel').textContent=goal.toFixed(2)+' €';
+}
+
+function renderBookmakerBars(s){
+  const card=document.getElementById('bookmakerCard');
+  const books=Object.entries(s.bookmakerMap).sort((a,b)=>b[1].total-a[1].total);
+  if(books.length===0){card.style.display='none';return;}
+  card.style.display='';
+  const max=books[0][1].total;
+  const C=['#22c55e','#84cc16','#eab308','#f59e0b','#ef4444'];
+  document.getElementById('bookmakerBars').innerHTML=books.map(([name,d])=>{
+    const pct=Math.round(d.won/d.total*100),bw=Math.round(d.total/max*100);
+    const c=pct>=65?C[0]:pct>=50?C[1]:pct>=40?C[2]:pct>=30?C[3]:C[4];
+    return `<div class="stat-bar-row"><div class="stat-bar-label">${name}</div><div class="stat-bar-track"><div class="stat-bar-fill" style="width:${bw}%;background:${c};opacity:.7;"></div></div><div class="stat-bar-pct" style="color:${c}">${pct}%</div><div class="stat-bar-count">${d.won}/${d.total}</div></div>`;
+  }).join('');
+}
+
+const MONTH_NAMES=['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+function renderMonthlyRecap(s){
+  const el=document.getElementById('monthlyRecap');
+  if(!s.monthly||s.monthly.length===0){
+    el.innerHTML='<div style="font-size:0.78rem;color:var(--muted);text-align:center;padding:16px;">Pas encore assez de données.</div>';
+    return;
+  }
+  el.innerHTML=s.monthly.map(m=>{
+    const winRate=m.total>0?Math.round(m.won/m.total*100):0;
+    const gainCls=m.gain>=0?'pos':'neg';
+    return `<div class="recap-row">
+      <span class="recap-month">${MONTH_NAMES[m.month]} ${m.year}</span>
+      <span class="recap-mid">${m.total} paris · ${winRate}% réussite</span>
+      <span class="recap-gain ${gainCls}" style="color:${m.gain>=0?'var(--win)':'var(--loss)'}">${m.gain>=0?'+':''}${m.gain.toFixed(2)} €</span>
+    </div>`;
+  }).join('');
 }
 
 function renderParticipants(s){
@@ -1285,6 +1599,10 @@ function renderMainChart(s){
     chartInstance=new Chart(ctx,{type:'line',data:{labels,datasets:[{label:'BK',data:flat.map(b=>b.bkAfter),borderColor:'#4f6ef7',backgroundColor:'rgba(79,110,247,0.08)',fill:true,tension:0.35,pointRadius:2,pointBackgroundColor:flat.map(b=>b.status==='Gagné'?'#22c55e':b.status==='Perdu'?'#ef4444':'#f59e0b'),pointBorderColor:'#141926',pointBorderWidth:1}]},options:{plugins:{legend:{display:false}},scales:{x:{ticks:{color:T,font:{size:9}},grid:{color:G},maxTicksLimit:15},y:{ticks:{color:T,font:{size:9},callback:v=>v+'€'},grid:{color:G},min:0}}}});
   }else if(chartMode==='gain'){
     chartInstance=new Chart(ctx,{type:'bar',data:{labels,datasets:[{label:'Gain',data:flat.map(b=>b.gain),backgroundColor:flat.map(b=>b.gain>=0?'rgba(34,197,94,0.65)':'rgba(239,68,68,0.65)'),borderRadius:2}]},options:{plugins:{legend:{display:false}},scales:{x:{ticks:{color:T,font:{size:9}},grid:{color:G},maxTicksLimit:15},y:{ticks:{color:T,font:{size:9},callback:v=>v+'€'},grid:{color:G}}}}});
+  }else if(chartMode==='drawdown'){
+    let peak=state.bkStart;
+    const d=flat.map(b=>{if(b.bkAfter>peak)peak=b.bkAfter;return Math.round((b.bkAfter-peak)*100)/100;});
+    chartInstance=new Chart(ctx,{type:'line',data:{labels,datasets:[{label:'Drawdown',data:d,borderColor:'#ef4444',backgroundColor:'rgba(239,68,68,0.12)',fill:true,tension:0.25,pointRadius:2,pointBackgroundColor:'#ef4444'}]},options:{plugins:{legend:{display:false}},scales:{x:{ticks:{color:T,font:{size:9}},grid:{color:G},maxTicksLimit:15},y:{ticks:{color:T,font:{size:9},callback:v=>v+'€'},grid:{color:G},max:0}}}});
   }else{
     let cum=0;const d=flat.map(b=>{cum=Math.round((cum+b.gain)*100)/100;return cum;});
     chartInstance=new Chart(ctx,{type:'line',data:{labels,datasets:[{label:'Cumulé',data:d,borderColor:'#f59e0b',backgroundColor:'rgba(245,158,11,0.07)',fill:true,tension:0.3,pointRadius:2,pointBackgroundColor:'#f59e0b'}]},options:{plugins:{legend:{display:false}},scales:{x:{ticks:{color:T,font:{size:9}},grid:{color:G},maxTicksLimit:15},y:{ticks:{color:T,font:{size:9},callback:v=>v+'€'},grid:{color:G}}}}});
@@ -1322,19 +1640,53 @@ function renderStreaks(s){
     <div class="streak-card"><div class="streak-val" style="color:var(--loss)">${s.seqLost}</div><div class="streak-lbl">Séq. perdues</div></div>`;
 }
 
+function nextP1Threshold(bk){
+  const r=state.multiplier,n=state.nbPaliers;
+  const k=(r-1)/(Math.pow(r,n)-1); // mise P1 = floor(bk*k*100)/100
+  const currentCents=Math.round(getMiseP1(bk)*100);
+  const nextCents=currentCents+1;
+  const nextBK=nextCents/(k*100);
+  return {nextMise:nextCents/100, nextBK};
+}
 function renderPalierGrid(){
   const bk=currentBK(),mises=getMises(bk),cumuls=getCumuls(bk);
   const C=['#22c55e','#84cc16','#eab308','#f97316','#ef4444','#a78bfa'];
   document.getElementById('palierGrid').innerHTML=mises.map((m,i)=>`
     <div class="pal-card"><div class="pal-num">Palier ${i+1}</div><div class="pal-mise" style="color:${C[i]||'#a78bfa'}">${m.toFixed(2)} €</div><div class="pal-cumul">cumul ${cumuls[i].toFixed(2)} €</div></div>`).join('');
+  const t=nextP1Threshold(bk);
+  document.getElementById('palierNextThreshold').textContent=
+    `💡 Le palier 1 passera à ${t.nextMise.toFixed(2)} € à partir de ${t.nextBK.toFixed(2)} € de BK (actuellement ${bk.toFixed(2)} €).`;
 }
 
 // ═══════════════════════════
 //  SETTINGS
 // ═══════════════════════════
+function onBkModeChange(){
+  const mode=document.getElementById('setBkMode').value;
+  document.getElementById('martingaleParamsWrap').style.display = mode==='martingale'?'':'none';
+  const title=document.getElementById('participantsSectionTitle');
+  if(title)title.textContent = mode==='standard'?'👥 Bankroll participative':'👥 Martingale participative';
+}
+function applyBkModeUI(){
+  const isStandard=state.bkMode==='standard';
+  const seqWrap=document.getElementById('martingaleSeqWrap');
+  const miseSuggWrap=document.getElementById('martingaleMiseSuggWrap');
+  const palierCard=document.getElementById('palierGridCard');
+  if(seqWrap)seqWrap.style.display=isStandard?'none':'';
+  if(miseSuggWrap)miseSuggWrap.style.display=isStandard?'none':'';
+  const miseInput=document.getElementById('fMise');
+  if(miseInput&&isStandard)miseInput.value='';
+  if(palierCard)palierCard.style.display=isStandard?'none':'';
+  const seqLabel=document.getElementById('sKSeqLabel');
+  if(seqLabel)seqLabel.textContent=isStandard?'Paris':'Séquences';
+}
 function openSettings(){
+  document.getElementById('setBkMode').value    = state.bkMode||'martingale';
+  onBkModeChange();
   document.getElementById('setMulti').value     = state.multiplier;
   document.getElementById('setNbPaliers').value = state.nbPaliers;
+  document.getElementById('setBkGoal').value         = state.bkGoal||'';
+  document.getElementById('setDailyLossLimit').value = state.dailyLossLimit||'';
   settingsParticipants = JSON.parse(JSON.stringify(state.participants||[]));
   renderParticipantsSettings();
   const fbCfg=getFirebaseConfig();
@@ -1420,8 +1772,15 @@ function saveSettings(){
   if(isNaN(bk)||bk<=0||isNaN(mul)||mul<2||isNaN(nb)||nb<2){
     showToast('Valeurs invalides.','#ef4444'); return;
   }
+  const goal=parseFloat(document.getElementById('setBkGoal').value);
+  const lossLimit=parseFloat(document.getElementById('setDailyLossLimit').value);
+
   state.bkStart=bk; state.multiplier=mul; state.nbPaliers=nb;
+  state.bkMode=document.getElementById('setBkMode').value==='standard'?'standard':'martingale';
+  state.bkGoal=(!isNaN(goal)&&goal>0)?goal:0;
+  state.dailyLossLimit=(!isNaN(lossLimit)&&lossLimit>0)?lossLimit:0;
   state.participants=cleanParticipants;
+  applyBkModeUI();
 
   // Save OAuth credentials if all 3 filled
   const cId  = document.getElementById('setClientId').value.trim();
@@ -1495,7 +1854,7 @@ function goPage(id,el){
   document.getElementById('page-'+id).classList.add('active');
   el.classList.add('active');
   if(id==='stats') render();
-  if(id==='add')   updateFormSeqSelect();
+  if(id==='add'){ updateFormSeqSelect(); updateBookmakerList(); }
   if(id==='cal')   renderCalendar();
 }
 
@@ -1510,6 +1869,20 @@ function renderAlerts(){
   const resolved=flat.filter(b=>b.status!=='En cours');
   const pending=flat.filter(b=>b.status==='En cours');
   const alerts=[];
+
+  // ── Limite de perte quotidienne ──
+  if(state.dailyLossLimit>0){
+    const now=new Date();
+    const todayResolved=resolved.filter(b=>{
+      const d=new Date(b.id);
+      return d.getFullYear()===now.getFullYear()&&d.getMonth()===now.getMonth()&&d.getDate()===now.getDate();
+    });
+    const todayGain=todayResolved.reduce((s,b)=>s+b.gain,0);
+    if(todayGain<0&&Math.abs(todayGain)>=state.dailyLossLimit){
+      alerts.push({type:'danger',icon:'🛑',title:`Limite de perte quotidienne atteinte (-${Math.abs(todayGain).toFixed(2)} €)`,
+        desc:`Tu as fixé une limite de ${state.dailyLossLimit.toFixed(2)} € de perte par jour. Tu es à -${Math.abs(todayGain).toFixed(2)} € aujourd'hui sur ${todayResolved.length} pari(s) résolu(s). Il est temps de faire une pause.`});
+    }
+  }
 
   // ── Alerte palier élevé ──
   const openSeqs=state.sequences.filter(s=>seqStatus(s)==='open');
@@ -1973,7 +2346,9 @@ if(isIOSSafari()&&!localStorage.getItem('installDismissed')){
 // ═══════════════════════════
 //  INIT
 // ═══════════════════════════
+document.getElementById('editSport').innerHTML=SPORT_OPTIONS_HTML;
 load();
+applyBkModeUI();
 recomputeBK();
 updateFormSeqSelect();
 render();

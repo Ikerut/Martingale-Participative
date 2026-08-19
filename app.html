@@ -519,7 +519,7 @@ body{font-family:-apple-system,'Segoe UI',system-ui,sans-serif;background:var(--
       <div class="form-row">
         <span class="ticket-import-toggle" id="ticketImportToggle" onclick="toggleTicketImport()">📷 Importer un ticket (photo)</span>
         <div id="ticketImportPanel" class="ticket-import-panel" style="display:none;">
-          <input type="file" accept="image/*" capture="environment" id="ticketPhotoInput" onchange="handleTicketPhoto(event)">
+          <input type="file" accept="image/*" id="ticketPhotoInput" onchange="handleTicketPhoto(event)">
           <div class="seq-hint" id="ticketOcrStatus" style="display:none;"></div>
           <pre class="ticket-ocr-raw" id="ticketOcrRawText" style="display:none;"></pre>
           <div class="seq-hint">Lecture automatique par reconnaissance de texte (analyse faite dans le navigateur). Pris en charge pour les paris simples uniquement — vérifie toujours les champs avant d'enregistrer.</div>

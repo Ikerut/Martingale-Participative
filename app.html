@@ -1897,6 +1897,21 @@ function renderParticipants(s){
   }).join('');
 }
 
+function niceAxisRange(...valueArrays){
+  const all=valueArrays.flat().filter(v=>typeof v==='number'&&!isNaN(v));
+  if(all.length===0)return{min:undefined,max:undefined};
+  const min=Math.min(...all),max=Math.max(...all);
+  if(min===max){
+    const pad=Math.max(Math.abs(min)*0.1,1);
+    return{min:Math.round((min-pad)*100)/100,max:Math.round((max+pad)*100)/100};
+  }
+  const range=max-min;
+  const pad=range*0.12;
+  let axisMin=min-pad;
+  if(axisMin>0&&axisMin<pad*1.5)axisMin=0; // snap down to 0 if data already hovers near it
+  if(min>=0&&axisMin<0)axisMin=0; // never dip below 0 for series that never do
+  return{min:Math.round(axisMin*100)/100,max:Math.round((max+pad)*100)/100};
+}
 function renderMainChart(s){
   const entries=computeSequenceSeries();
   if(chartInstance){chartInstance.destroy();chartInstance=null;}
@@ -1905,7 +1920,8 @@ function renderMainChart(s){
   const labels=entries.map((_,i)=>'Séq '+(i+1));
   const ctx=document.getElementById('mainChart').getContext('2d');
   if(chartMode==='bk'){
-    chartInstance=new Chart(ctx,{type:'line',data:{labels,datasets:[{label:'BK',data:entries.map(e=>e.bkAfter),borderColor:'#4f6ef7',backgroundColor:'rgba(79,110,247,0.08)',fill:true,tension:0.35,pointRadius:2,pointBackgroundColor:entries.map(e=>e.status==='won'?'#22c55e':e.status==='lost'?'#ef4444':'#f59e0b'),pointBorderColor:'#141926',pointBorderWidth:1}]},options:{plugins:{legend:{display:false}},scales:{x:{ticks:{color:T,font:{size:9}},grid:{color:G},maxTicksLimit:15},y:{ticks:{color:T,font:{size:9},callback:v=>v+'€'},grid:{color:G},min:0}}}});
+    const bkR=niceAxisRange(entries.map(e=>e.bkAfter));
+    chartInstance=new Chart(ctx,{type:'line',data:{labels,datasets:[{label:'BK',data:entries.map(e=>e.bkAfter),borderColor:'#4f6ef7',backgroundColor:'rgba(79,110,247,0.08)',fill:true,tension:0.35,pointRadius:2,pointBackgroundColor:entries.map(e=>e.status==='won'?'#22c55e':e.status==='lost'?'#ef4444':'#f59e0b'),pointBorderColor:'#141926',pointBorderWidth:1}]},options:{plugins:{legend:{display:false}},scales:{x:{ticks:{color:T,font:{size:9}},grid:{color:G},maxTicksLimit:15},y:{ticks:{color:T,font:{size:9},callback:v=>v+'€'},grid:{color:G},min:bkR.min,max:bkR.max}}}});
   }else if(chartMode==='gain'){
     chartInstance=new Chart(ctx,{type:'bar',data:{labels,datasets:[{label:'Gain',data:entries.map(e=>e.gain),backgroundColor:entries.map(e=>e.gain>=0?'rgba(34,197,94,0.65)':'rgba(239,68,68,0.65)'),borderRadius:2}]},options:{plugins:{legend:{display:false}},scales:{x:{ticks:{color:T,font:{size:9}},grid:{color:G},maxTicksLimit:15},y:{ticks:{color:T,font:{size:9},callback:v=>v+'€'},grid:{color:G}}}}});
   }else if(chartMode==='drawdown'){
@@ -1917,10 +1933,11 @@ function renderMainChart(s){
     if(!fb){return;}
     const realData=entries.map(e=>e.bkAfter);
     const flatData=fb.series.map(e=>e.flatBK);
+    const cmpR=niceAxisRange(realData,flatData);
     chartInstance=new Chart(ctx,{type:'line',data:{labels,datasets:[
       {label:'Martingale',data:realData,borderColor:'#4f6ef7',backgroundColor:'rgba(79,110,247,0.06)',fill:true,tension:0.3,pointRadius:2},
       {label:'Mise à plat',data:flatData,borderColor:'#a78bfa',backgroundColor:'rgba(167,139,250,0.05)',borderDash:[5,4],fill:true,tension:0.3,pointRadius:2}
-    ]},options:{plugins:{legend:{display:true,labels:{color:T,font:{size:9},boxWidth:10}}},scales:{x:{ticks:{color:T,font:{size:9}},grid:{color:G},maxTicksLimit:15},y:{ticks:{color:T,font:{size:9},callback:v=>v+'€'},grid:{color:G}}}}});
+    ]},options:{plugins:{legend:{display:true,labels:{color:T,font:{size:9},boxWidth:10}}},scales:{x:{ticks:{color:T,font:{size:9}},grid:{color:G},maxTicksLimit:15},y:{ticks:{color:T,font:{size:9},callback:v=>v+'€'},grid:{color:G},min:cmpR.min,max:cmpR.max}}}});
   }else{
     let cum=0;const d=entries.map(e=>{cum=Math.round((cum+e.gain)*100)/100;return cum;});
     chartInstance=new Chart(ctx,{type:'line',data:{labels,datasets:[{label:'Cumulé',data:d,borderColor:'#f59e0b',backgroundColor:'rgba(245,158,11,0.07)',fill:true,tension:0.3,pointRadius:2,pointBackgroundColor:'#f59e0b'}]},options:{plugins:{legend:{display:false}},scales:{x:{ticks:{color:T,font:{size:9}},grid:{color:G},maxTicksLimit:15},y:{ticks:{color:T,font:{size:9},callback:v=>v+'€'},grid:{color:G}}}}});

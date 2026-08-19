@@ -182,6 +182,7 @@ body{font-family:-apple-system,'Segoe UI',system-ui,sans-serif;background:var(--
 .btn-edit{background:rgba(79,110,247,.15);color:var(--accent2);border:1px solid rgba(79,110,247,.3);}
 .btn-del{background:rgba(100,116,139,.1);color:var(--muted);border:1px solid var(--border);}
 .btn-dup{background:rgba(167,139,250,.15);color:#a78bfa;border:1px solid rgba(167,139,250,.3);}
+.btn-nextpal{background:rgba(79,110,247,.18);color:var(--accent2);border:1px solid rgba(79,110,247,.4);font-weight:700;}
 .btn-sm:active{opacity:.7;transform:scale(0.95);}
 
 /* ── SEQUENCES ── */
@@ -1567,23 +1568,35 @@ function parseTicketText(text){
   }
 
   if(!result.isCombine){
-    const skipRe=/^(En\s*cours|Termin[ée]|Simple|Combin[ée]|Mise\b|Gains?\b|Cashout|R[ée]f\s*:?|Compl[ée]ter|Rembours[ée]|Gagn[ée]|Perdu(e)?)/i;
+    const skipRe=/^(En\s*cours|Termin[ée]|Simple|Combin[ée]|Mise\b|Gains?\b|Cashout|R[ée]f\s*:?|Compl[ée]ter|Rembours[ée]|Gagn[ée]|Perdu(e)?|Annuler)/i;
     const numRe=/^[\d\s.,€:%\-hH|]+$/;
     const nameToken='[A-ZÀ-Ý][A-Za-zÀ-ÿ.\'\\-]{1,20}';
-    const multiWord=nameToken+'(?:\\s+'+nameToken+')*';
-    const pairRe=new RegExp(multiWord+'(?:\\s*/\\s*'+multiWord+')?','g');
-    const cleanNamePair=(line)=>{
-      const matches=[...line.matchAll(pairRe)].map(m=>m[0]);
-      if(matches.length===0)return null;
-      const withSlash=matches.find(m=>m.includes('/'));
-      return withSlash||matches.reduce((a,b)=>b.length>a.length?b:a);
-    };
-    const candidateLines=lines
-      .filter(l=>!skipRe.test(l)&&!/Vainqueur/i.test(l)&&!numRe.test(l)&&!/€/.test(l)&&!/\d{1,2}h\d{2}/i.test(l))
-      .map(cleanNamePair)
-      .filter(Boolean);
-    if(candidateLines.length>=2){result.match=candidateLines[0]+' vs '+candidateLines[1];result.matchedAny=true;}
-    else if(candidateLines.length===1){result.match=candidateLines[0];result.matchedAny=true;}
+    const multiWord=nameToken+'(?:\\s+'+nameToken+')?'; // au plus 2 mots (prénom+nom, etc.) pour ne pas absorber le texte qui suit
+    const relevantLines=lines.filter(l=>!skipRe.test(l)&&!/Vainqueur/i.test(l)&&!numRe.test(l)&&!/€/.test(l)&&!/\d{1,2}h\d{2}/i.test(l));
+
+    // Cas "le match n'a pas commencé" : les deux camps sont sur UNE seule ligne, séparés par " - "
+    // (jamais par "/", qui lui sépare les deux membres d'une même équipe/paire).
+    const vsLineRe=new RegExp('('+multiWord+')\\s+-\\s+('+multiWord+')');
+    let vsMatch=null;
+    for(const l of relevantLines){
+      const m=l.match(vsLineRe);
+      if(m){vsMatch=m[1]+' vs '+m[2];break;}
+    }
+    if(vsMatch){
+      result.match=vsMatch;result.matchedAny=true;
+    }else{
+      // Cas "le match est en cours" (scores en direct) : chaque camp est sur sa propre ligne.
+      const pairRe=new RegExp(multiWord+'(?:\\s*/\\s*'+multiWord+')?','g');
+      const cleanNamePair=(line)=>{
+        const matches=[...line.matchAll(pairRe)].map(m=>m[0]);
+        if(matches.length===0)return null;
+        const withSlash=matches.find(m=>m.includes('/'));
+        return withSlash||matches.reduce((a,b)=>b.length>a.length?b:a);
+      };
+      const candidateLines=relevantLines.map(cleanNamePair).filter(Boolean);
+      if(candidateLines.length>=2){result.match=candidateLines[0]+' vs '+candidateLines[1];result.matchedAny=true;}
+      else if(candidateLines.length===1){result.match=candidateLines[0];result.matchedAny=true;}
+    }
   }
   return result;
 }
@@ -1660,6 +1673,19 @@ function duplicateBet(betId){
     document.getElementById('fMise').value=bet.mise;
   }
   showToast('🔁 Formulaire pré-rempli — vérifie puis enregistre.','#a78bfa');
+}
+function addNextPalier(seqId){
+  const seq=state.sequences.find(s=>s.id===seqId);
+  if(!seq)return;
+  goPage('add',document.getElementById('bnav-add'));
+  resetBetForm();
+  document.getElementById('fMatch').value='';
+  document.getElementById('fProno').value='';
+  document.getElementById('fCote').value='';
+  document.getElementById('fSeq').value=String(seqId);
+  onSeqChange();
+  const nextP=nextPalierForSeq(seq);
+  showToast(`➕ Palier ${nextP} pré-configuré — complète le match et enregistre.`,'#4f6ef7');
 }
 function addBet(){
   const seqSel=document.getElementById('fSeq').value;
@@ -1937,9 +1963,23 @@ function onSeqChange(){
     const seq=state.sequences.find(s=>s.id===parseInt(v));
     if(seq){
       const nextP=nextPalierForSeq(seq);
-      const p=mises[nextP-1]||0;
+      const sortedBets=[...seq.bets].sort((a,c)=>a.id-c.id);
+      const lastBet=sortedBets[sortedBets.length-1];
+      let p;
+      if(lastBet&&nextP===lastBet.palier+1){
+        // Palier précédent perdu → mise suggérée = mise RÉELLE de ce palier × multiplicateur
+        // (pas un recalcul sur la BK actuelle, qui a déjà bougé à cause de cette même perte).
+        p=Math.round(lastBet.mise*state.multiplier*100)/100;
+      }else if(lastBet&&nextP===lastBet.palier){
+        // Le dernier pari de ce palier est encore en cours → même mise de référence.
+        p=lastBet.mise;
+      }else{
+        p=mises[nextP-1]||0;
+      }
+      const cumulPrev=sortedBets.filter(bt=>bt.palier<nextP).reduce((s,bt)=>s+bt.mise,0);
+      const cumul=Math.round((cumulPrev+p)*100)/100;
       document.getElementById('miseSuggLabel').textContent=p.toFixed(2)+' €';
-      document.getElementById('miseSuggInfo').textContent='P'+nextP+' · cumul '+cumuls[nextP-1].toFixed(2)+' €';
+      document.getElementById('miseSuggInfo').textContent='P'+nextP+' · cumul '+cumul.toFixed(2)+' €';
       document.getElementById('fMise').value=p.toFixed(2);
       hint.textContent='Suite de la séquence — palier '+nextP+'.';
     }
@@ -2094,6 +2134,17 @@ const seqPalC=['p1','p2','p3','p4','p5','p6'];
 function betStepInner(b,showPalier){
   const gainStr=b.status==='En cours'?'—':(b.gain>=0?'+':'')+b.gain.toFixed(2)+' €';
   const gainCls=b.gain>=0?'pos':'neg';
+  let nextPalierBtn='';
+  if(b.status==='Perdu'&&state.bkMode!=='standard'){
+    const {seq}=findBet(b.id);
+    if(seq&&seqStatus(seq)==='open'){
+      const sortedBets=[...seq.bets].sort((a,c)=>a.id-c.id);
+      if(sortedBets[sortedBets.length-1]?.id===b.id){
+        const nextP=nextPalierForSeq(seq);
+        nextPalierBtn=`<button class="btn-sm btn-nextpal" onclick="addNextPalier(${seq.id})">➕ Ajouter P${nextP}</button>`;
+      }
+    }
+  }
   const actions=b.status==='En cours'
     ?`<button class="btn-sm btn-win"  onclick="resolveBet(${b.id},'Gagné')">✅ Gagné</button>
        <button class="btn-sm btn-loss" onclick="resolveBet(${b.id},'Perdu')">❌ Perdu</button>
@@ -2101,7 +2152,7 @@ function betStepInner(b,showPalier){
        <button class="btn-sm btn-edit" onclick="openEdit(${b.id})">✏️</button>
        <button class="btn-sm btn-dup"  onclick="duplicateBet(${b.id})">🔁</button>
        <button class="btn-sm btn-del"  onclick="deleteBet(${b.id})">🗑</button>`
-    :`<button class="btn-sm btn-edit" onclick="openEdit(${b.id})">✏️ Modifier</button>
+    :`${nextPalierBtn}<button class="btn-sm btn-edit" onclick="openEdit(${b.id})">✏️ Modifier</button>
        <button class="btn-sm btn-dup"  onclick="duplicateBet(${b.id})">🔁 Dupliquer</button>
        <button class="btn-sm btn-del"  onclick="deleteBet(${b.id})">🗑</button>`;
   const comboBadge=b.type==='combine'?'<span class="combo-badge">🔗 Combiné</span>':'';

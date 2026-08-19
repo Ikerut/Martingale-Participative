@@ -196,6 +196,10 @@ body{font-family:-apple-system,'Segoe UI',system-ui,sans-serif;background:var(--
 .fixture-result-item{display:flex;justify-content:space-between;align-items:center;gap:8px;}
 .fixture-result-date{font-size:0.65rem;color:var(--muted);white-space:nowrap;}
 .step-score-hint{font-size:0.72rem;color:var(--accent2);background:rgba(79,110,247,.08);border-radius:6px;padding:5px 8px;margin:4px 0 8px;}
+.ticket-import-toggle{font-size:0.78rem;color:var(--accent2);cursor:pointer;font-weight:600;}
+.ticket-import-panel{background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:10px;margin-top:8px;}
+.ticket-import-panel input[type=file]{width:100%;background:var(--card);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-size:0.75rem;padding:9px 10px;outline:none;margin-bottom:8px;}
+.ticket-ocr-raw{white-space:pre-wrap;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:0.65rem;color:var(--muted);max-height:140px;overflow-y:auto;margin-bottom:8px;}
 .seq-search-input::placeholder{color:var(--muted);}
 .seq-filter-row{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:12px;}
 .seq-pagination{display:flex;align-items:center;justify-content:center;gap:12px;margin-top:12px;}
@@ -320,6 +324,9 @@ body{font-family:-apple-system,'Segoe UI',system-ui,sans-serif;background:var(--
 .rpick.r-cash{border-color:rgba(245,158,11,.4);color:var(--cashout);}
 .rpick.r-pending{border-color:rgba(100,116,139,.4);color:var(--pending);}
 .rpick.selected{background:rgba(79,110,247,.2);border-color:var(--accent);}
+.mise-mode-toggle{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px;}
+.mmt-btn{padding:10px 8px;border-radius:10px;border:2px solid var(--border);cursor:pointer;text-align:center;font-size:0.8rem;font-weight:600;color:var(--muted);background:var(--surface);transition:all .2s;}
+.mmt-btn.selected{background:rgba(79,110,247,.2);border-color:var(--accent);color:var(--accent);}
 .cashout-wrap{display:none;}
 .cashout-wrap.show{display:block;margin-bottom:10px;}
 
@@ -509,6 +516,16 @@ body{font-family:-apple-system,'Segoe UI',system-ui,sans-serif;background:var(--
         </div>
       </div>
 
+      <div class="form-row">
+        <span class="ticket-import-toggle" id="ticketImportToggle" onclick="toggleTicketImport()">📷 Importer un ticket (photo)</span>
+        <div id="ticketImportPanel" class="ticket-import-panel" style="display:none;">
+          <input type="file" accept="image/*" capture="environment" id="ticketPhotoInput" onchange="handleTicketPhoto(event)">
+          <div class="seq-hint" id="ticketOcrStatus" style="display:none;"></div>
+          <pre class="ticket-ocr-raw" id="ticketOcrRawText" style="display:none;"></pre>
+          <div class="seq-hint">Lecture automatique par reconnaissance de texte (analyse faite dans le navigateur). Pris en charge pour les paris simples uniquement — vérifie toujours les champs avant d'enregistrer.</div>
+        </div>
+      </div>
+
       <div id="simpleFields">
         <div class="form-row">
           <label>Sport</label>
@@ -579,9 +596,17 @@ body{font-family:-apple-system,'Segoe UI',system-ui,sans-serif;background:var(--
         </div>
       </div>
 
+      <div class="form-row" id="miseModeWrap" style="display:none;">
+        <label>Mode de mise</label>
+        <div class="mise-mode-toggle">
+          <div class="mmt-btn selected" id="miseModeFixed" onclick="setMiseMode('fixed')">€ Montant fixe</div>
+          <div class="mmt-btn" id="miseModePercent" onclick="setMiseMode('percent')">% de la BK</div>
+        </div>
+      </div>
       <div class="form-row">
-        <label>Mise réelle (€)</label>
-        <input type="number" id="fMise" step="0.01" min="0.01" placeholder="0.00" inputmode="decimal">
+        <label id="fMiseLabel">Mise réelle (€)</label>
+        <input type="number" id="fMise" step="0.01" min="0.01" placeholder="0.00" inputmode="decimal" oninput="updateMisePctPreview()">
+        <div class="seq-hint" id="misePctPreview" style="display:none;"></div>
       </div>
 
       <div class="form-row">
@@ -1153,6 +1178,38 @@ function seqStatus(seq){
 // ═══════════════════════════
 let betType='simple';
 let comboRowIdSeq=0;
+let miseMode='fixed'; // 'fixed' (€) or 'percent' (% de la BK) — % only offered in mode standard
+function setMiseMode(mode){
+  miseMode=mode;
+  document.getElementById('miseModeFixed').classList.toggle('selected',mode==='fixed');
+  document.getElementById('miseModePercent').classList.toggle('selected',mode==='percent');
+  const label=document.getElementById('fMiseLabel');
+  const input=document.getElementById('fMise');
+  if(mode==='percent'){
+    label.textContent='Mise (% de la BK)';
+    input.step='0.1';
+    input.min='0.1';
+    input.placeholder='ex: 5';
+  }else{
+    label.textContent='Mise réelle (€)';
+    input.step='0.01';
+    input.min='0.01';
+    input.placeholder='0.00';
+  }
+  input.value='';
+  updateMisePctPreview();
+}
+function updateMisePctPreview(){
+  const preview=document.getElementById('misePctPreview');
+  if(!preview)return;
+  if(miseMode!=='percent'){preview.style.display='none';return;}
+  const pct=parseFloat(document.getElementById('fMise').value);
+  if(isNaN(pct)||pct<=0){preview.style.display='none';return;}
+  const bk=currentBK();
+  const amount=Math.round(bk*pct/100*100)/100;
+  preview.style.display='block';
+  preview.textContent=`≈ ${amount.toFixed(2)} € (BK actuelle : ${bk.toFixed(2)} €)`;
+}
 
 function setBetType(type,el){
   betType=type;
@@ -1228,7 +1285,7 @@ function fillComboRow(row,data){
 function resetBetForm(){
   document.getElementById('comboList').innerHTML='';
   setBetType('simple',document.getElementById('betTypeSimple'));
-  if(state.bkMode==='standard')document.getElementById('fMise').value='';
+  if(state.bkMode==='standard'){document.getElementById('fMise').value='';updateMisePctPreview();}
   document.getElementById('fBookmaker').value='';
   document.getElementById('fNote').value='';
   addSelectedResult='En cours';
@@ -1238,6 +1295,12 @@ function resetBetForm(){
   const cv=document.getElementById('fCashoutVal');if(cv)cv.value='';
   clearMatchSearchLink();
   document.getElementById('matchSearchPanel').style.display='none';
+  const ticketPanel=document.getElementById('ticketImportPanel');
+  if(ticketPanel)ticketPanel.style.display='none';
+  const ticketStatus=document.getElementById('ticketOcrStatus');
+  if(ticketStatus)ticketStatus.style.display='none';
+  const ticketRaw=document.getElementById('ticketOcrRawText');
+  if(ticketRaw)ticketRaw.style.display='none';
   onFSportChange();
 }
 
@@ -1400,6 +1463,132 @@ async function checkMatchScores(){
   }
   if(changed)renderSequences();
 }
+
+// ═══════════════════════════
+//  IMPORT DE TICKET PAR PHOTO (OCR — Tesseract.js, chargé à la demande)
+// ═══════════════════════════
+const TESSERACT_CDN_URL='https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/7.0.0/tesseract.min.js';
+const FR_MONTHS={janvier:1,février:2,fevrier:2,mars:3,avril:4,mai:5,juin:6,juillet:7,août:8,aout:8,septembre:9,octobre:10,novembre:11,décembre:12,decembre:12};
+let tesseractLoaded=typeof Tesseract!=='undefined';
+let tesseractLoadPromise=null;
+function loadTesseract(){
+  if(typeof Tesseract!=='undefined'){tesseractLoaded=true;return Promise.resolve();}
+  if(tesseractLoadPromise)return tesseractLoadPromise;
+  tesseractLoadPromise=new Promise((resolve,reject)=>{
+    const s=document.createElement('script');
+    s.src=TESSERACT_CDN_URL;
+    s.onload=()=>{tesseractLoaded=true;resolve();};
+    s.onerror=()=>reject(new Error('tesseract-load-failed'));
+    document.head.appendChild(s);
+  });
+  return tesseractLoadPromise;
+}
+function toggleTicketImport(){
+  const panel=document.getElementById('ticketImportPanel');
+  panel.style.display=panel.style.display==='none'?'':'none';
+}
+function fileToDataUrl(file){
+  return new Promise((resolve,reject)=>{
+    const r=new FileReader();
+    r.onload=()=>resolve(r.result);
+    r.onerror=reject;
+    r.readAsDataURL(file);
+  });
+}
+async function handleTicketPhoto(ev){
+  const file=ev.target.files&&ev.target.files[0];
+  if(!file)return;
+  const statusEl=document.getElementById('ticketOcrStatus');
+  const rawEl=document.getElementById('ticketOcrRawText');
+  rawEl.style.display='none';
+  rawEl.textContent='';
+  statusEl.style.display='block';
+  statusEl.textContent='📥 Chargement du moteur de reconnaissance…';
+  try{
+    await loadTesseract();
+    statusEl.textContent='🔍 Analyse de la photo en cours…';
+    const dataUrl=await fileToDataUrl(file);
+    const worker=await Tesseract.createWorker('fra');
+    const ret=await worker.recognize(dataUrl);
+    await worker.terminate();
+    const text=(ret&&ret.data&&ret.data.text)||'';
+    const parsed=parseTicketText(text);
+    applyParsedTicket(parsed);
+    statusEl.textContent=parsed.matchedAny
+      ?'✅ Ticket analysé — vérifie les champs avant d\'enregistrer.'
+      :'⚠ Peu de champs reconnus sur cette photo — vérifie/complète manuellement.';
+    if(text.trim()){rawEl.textContent=text.trim();rawEl.style.display='block';}
+  }catch(e){
+    statusEl.textContent='⚠ Analyse indisponible pour le moment — remplis le formulaire manuellement.';
+  }
+  ev.target.value='';
+}
+function parseTicketText(text){
+  const norm=(text||'').replace(/\r/g,'');
+  const lines=norm.split('\n').map(l=>l.trim()).filter(Boolean);
+  const result={matchedAny:false,isCombine:/\bCombin[ée]/i.test(norm)};
+
+  const grab=(re)=>{const m=norm.match(re);return m?parseFloat(m[1].replace(',','.')):null;};
+  result.mise=grab(/Mise\s*[:\-]?\s*(\d+[.,]\d{1,2})\s*€/i);
+  result.gainsPotentiels=grab(/Gains?(?:\s*potentiels?)?\s*[:\-]?\s*(\d+[.,]\d{1,2})\s*€/i);
+  result.cashout=grab(/Cashout\s*[:\-]?\s*(\d+[.,]\d{1,2})\s*€/i);
+  if(result.mise!=null)result.matchedAny=true;
+
+  const usedVals=[result.mise,result.gainsPotentiels,result.cashout].filter(v=>v!=null);
+  const decMatches=[...norm.matchAll(/\b(\d{1,2}[.,]\d{1,3})\b(?!\s*€)/g)].map(m=>parseFloat(m[1].replace(',','.')));
+  result.cote=decMatches.find(v=>!usedVals.includes(v)&&v>=1.01&&v<1000)??null;
+  if(result.cote!=null)result.matchedAny=true;
+
+  const dm=norm.match(/(\d{1,2})h(\d{2})\s*-\s*(\d{1,2})\s+([A-Za-zéûîÉ]+)\s+(\d{4})/i);
+  if(dm){
+    const monthNum=FR_MONTHS[dm[4].toLowerCase()];
+    if(monthNum){result.date={day:dm[3].padStart(2,'0'),month:String(monthNum).padStart(2,'0'),year:dm[5],hour:dm[1].padStart(2,'0'),minute:dm[2]};result.matchedAny=true;}
+  }
+
+  if(/\bEn cours\b/i.test(norm))result.status='En cours';
+  else if(/\bGagn[ée]/i.test(norm))result.status='Gagné';
+  else if(/\bPerdu(e)?\b/i.test(norm))result.status='Perdu';
+
+  const pronoLine=lines.find(l=>/^Vainqueur\b/i.test(l));
+  if(pronoLine){result.prono=pronoLine;result.matchedAny=true;}
+
+  if(!result.isCombine){
+    const skipRe=/^(En cours|Termin[ée]|Simple|Combin[ée]|Mise\b|Gains?\b|Cashout|R[ée]f\s*:?|Compl[ée]ter|Rembours[ée]|Gagn[ée]|Perdu(e)?|Vainqueur)/i;
+    const numRe=/^[\d\s.,€:%\-hH]+$/;
+    const candidateLines=lines.filter(l=>!skipRe.test(l)&&!numRe.test(l)&&!/€/.test(l)&&!/\d{1,2}h\d{2}/i.test(l)&&l.length>1);
+    if(candidateLines.length>=2){result.match=candidateLines[0]+' vs '+candidateLines[1];result.matchedAny=true;}
+    else if(candidateLines.length===1){result.match=candidateLines[0];result.matchedAny=true;}
+  }
+  return result;
+}
+function applyParsedTicket(p){
+  if(p.isCombine){
+    showToast('⚠ Combiné détecté sur ce ticket — remplis les sélections manuellement.','#f59e0b');
+    return;
+  }
+  if(p.match)document.getElementById('fMatch').value=p.match;
+  if(p.prono)document.getElementById('fProno').value=p.prono;
+  if(p.cote!=null)document.getElementById('fCote').value=p.cote;
+  if(p.mise!=null){
+    if(typeof miseMode!=='undefined'&&miseMode==='percent'&&typeof setMiseMode==='function')setMiseMode('fixed');
+    document.getElementById('fMise').value=p.mise;
+  }
+  if(p.date){
+    const noteEl=document.getElementById('fNote');
+    const dateNote=`Ticket : ${p.date.day}/${p.date.month}/${p.date.year} ${p.date.hour}h${p.date.minute}`;
+    noteEl.value=noteEl.value?noteEl.value+' — '+dateNote:dateNote;
+  }
+  if(p.status){
+    const map={'En cours':'.r-pending','Gagné':'.r-win','Perdu':'.r-loss'};
+    const sel=map[p.status];
+    const el=sel&&document.querySelector('#addResultPicker '+sel);
+    if(el)selectAddResult(p.status,el);
+  }
+  if(p.cashout!=null){
+    const cv=document.getElementById('fCashoutVal');
+    if(cv)cv.value=p.cashout;
+  }
+}
 function updateBookmakerList(){ updateAutocompleteLists(); }
 function updateAutocompleteLists(){
   const fill=(id,values)=>{
@@ -1436,12 +1625,29 @@ function duplicateBet(betId){
     document.getElementById('fCote').value=bet.cote;
   }
   document.getElementById('fBookmaker').value=bet.bookmaker||'';
-  document.getElementById('fMise').value=bet.mise;
+  if(state.bkMode==='standard'&&bet.misePct!=null){
+    setMiseMode('percent');
+    document.getElementById('fMise').value=bet.misePct;
+    updateMisePctPreview();
+  }else{
+    if(state.bkMode==='standard')setMiseMode('fixed');
+    document.getElementById('fMise').value=bet.mise;
+  }
   showToast('🔁 Formulaire pré-rempli — vérifie puis enregistre.','#a78bfa');
 }
 function addBet(){
   const seqSel=document.getElementById('fSeq').value;
-  const mise=parseFloat(document.getElementById('fMise').value);
+  const isStandardBet=state.bkMode==='standard';
+  const usePercentMise=isStandardBet&&miseMode==='percent';
+  const miseRaw=parseFloat(document.getElementById('fMise').value);
+  let mise=miseRaw;
+  let misePct=null;
+  if(usePercentMise){
+    if(isNaN(miseRaw)||miseRaw<=0){showToast('⚠ Renseigne un pourcentage de BK valide.','#ef4444');return;}
+    misePct=miseRaw;
+    mise=Math.round(currentBK()*miseRaw/100*100)/100;
+    if(mise<=0){showToast('⚠ BK insuffisante pour ce pourcentage.','#ef4444');return;}
+  }
   const bookmaker=document.getElementById('fBookmaker').value.trim();
   const note=document.getElementById('fNote').value.trim();
   let sport,match,prono,cote,type='simple',combo=null;
@@ -1486,7 +1692,7 @@ function addBet(){
     seq=state.sequences.find(s=>s.id===parseInt(seqSel));if(!seq){showToast('Séquence introuvable.','#ef4444');return;}
     palier=nextPalierForSeq(seq);
   }
-  const bet={id:Date.now()+Math.floor(Math.random()*1000),sport,match,prono,cote,palier,mise,status,gain:0,bkAfter:currentBK(),cashoutGain,type,combo,bookmaker,note,date:new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}),...(betType!=='combine'&&matchSearchLinked?{apiEventId:matchSearchLinked.eventId,apiSport:matchSearchLinked.apiSport,apiLeague:matchSearchLinked.apiLeague,apiEventDate:matchSearchLinked.date}:{})};
+  const bet={id:Date.now()+Math.floor(Math.random()*1000),sport,match,prono,cote,palier,mise,status,gain:0,bkAfter:currentBK(),cashoutGain,type,combo,bookmaker,note,date:new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}),...(misePct!=null?{misePct}:{}),...(betType!=='combine'&&matchSearchLinked?{apiEventId:matchSearchLinked.eventId,apiSport:matchSearchLinked.apiSport,apiLeague:matchSearchLinked.apiLeague,apiEventDate:matchSearchLinked.date}:{})};
   seq.bets.push(bet);
   matchSearchLinked=null;
   seqPage=0;
@@ -1653,6 +1859,7 @@ function saveEdit(){
     if(!match||isNaN(cote)||cote<1){showToast('⚠ Vérifie le match et la cote.','#ef4444');return;}
     bet.sport=sport;bet.match=match;bet.prono=prono;bet.cote=cote;
   }
+  if(bet.misePct!=null&&mise!==bet.mise)delete bet.misePct; // mise edited manually — the % badge no longer reflects it
   bet.mise=mise;
   bet.bookmaker=bookmaker;
 
@@ -1890,7 +2097,7 @@ function betStepInner(b,showPalier){
     ${b.note?`<div class="step-note">📝 ${b.note}</div>`:''}
     <div class="step-nums">
       <span class="step-cote">Cote ${b.type==='combine'?b.cote.toFixed(3):b.cote.toFixed(2)}</span>
-      <span class="step-mise">Mise ${b.mise.toFixed(2)} €</span>
+      <span class="step-mise">Mise ${b.mise.toFixed(2)} €${b.misePct!=null?` <span style="color:var(--muted);">(${b.misePct}% BK)</span>`:''}</span>
       <span class="step-gain ${gainCls}">${gainStr}</span>
     </div>
     ${scoreHint}
@@ -2204,6 +2411,9 @@ function applyBkModeUI(){
   if(palierCard)palierCard.style.display=isStandard?'none':'';
   const seqLabel=document.getElementById('sKSeqLabel');
   if(seqLabel)seqLabel.textContent=isStandard?'Paris':'Séquences';
+  const miseModeWrap=document.getElementById('miseModeWrap');
+  if(miseModeWrap)miseModeWrap.style.display=isStandard?'':'none';
+  if(!isStandard&&typeof setMiseMode==='function')setMiseMode('fixed');
 }
 function openSettings(){
   document.getElementById('setBkMode').value    = state.bkMode||'martingale';

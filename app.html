@@ -186,6 +186,16 @@ body{font-family:-apple-system,'Segoe UI',system-ui,sans-serif;background:var(--
 
 /* ── SEQUENCES ── */
 .seq-search-input{width:100%;background:var(--surface);border:1px solid var(--border2);border-radius:10px;color:var(--text);font-size:0.82rem;padding:10px 12px;outline:none;margin-bottom:10px;}
+.match-search-toggle{float:right;font-size:0.68rem;color:var(--accent2);cursor:pointer;font-weight:600;text-transform:none;letter-spacing:0;}
+.match-linked-badge{display:flex;align-items:center;justify-content:space-between;background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.3);color:var(--win);border-radius:8px;padding:6px 10px;font-size:0.72rem;font-weight:600;margin-top:6px;}
+.match-linked-badge span{cursor:pointer;color:var(--muted);font-weight:400;}
+.match-search-panel{background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:10px;margin-top:8px;}
+.match-search-panel input{width:100%;background:var(--card);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-size:0.8rem;padding:9px 10px;outline:none;margin-bottom:8px;}
+.team-result-item,.fixture-result-item{padding:8px 10px;border-radius:8px;font-size:0.78rem;cursor:pointer;margin-bottom:4px;background:var(--card);border:1px solid var(--border);}
+.team-result-item:hover,.fixture-result-item:hover{border-color:var(--accent2);}
+.fixture-result-item{display:flex;justify-content:space-between;align-items:center;gap:8px;}
+.fixture-result-date{font-size:0.65rem;color:var(--muted);white-space:nowrap;}
+.step-score-hint{font-size:0.72rem;color:var(--accent2);background:rgba(79,110,247,.08);border-radius:6px;padding:5px 8px;margin:4px 0 8px;}
 .seq-search-input::placeholder{color:var(--muted);}
 .seq-filter-row{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:12px;}
 .seq-pagination{display:flex;align-items:center;justify-content:center;gap:12px;margin-top:12px;}
@@ -502,7 +512,7 @@ body{font-family:-apple-system,'Segoe UI',system-ui,sans-serif;background:var(--
       <div id="simpleFields">
         <div class="form-row">
           <label>Sport</label>
-          <select id="fSport">
+          <select id="fSport" onchange="onFSportChange()">
             <option>Football</option><option>Tennis</option><option>Basketball</option>
             <option>Hockey</option><option>Badminton</option><option>Tennis de table</option>
             <option>Volleyball</option><option>Foot américain</option><option>Rugby</option>
@@ -511,9 +521,20 @@ body{font-family:-apple-system,'Segoe UI',system-ui,sans-serif;background:var(--
         </div>
 
         <div class="form-row">
-          <label>Match / Événement</label>
-          <input type="text" id="fMatch" placeholder="ex: PSG vs Lyon" autocomplete="off" list="matchList">
+          <label>Match / Événement
+            <span class="match-search-toggle" id="matchSearchToggle" onclick="toggleMatchSearch()" style="display:none;">🔍 Chercher un match réel</span>
+          </label>
+          <input type="text" id="fMatch" placeholder="ex: PSG vs Lyon" autocomplete="off" list="matchList" oninput="clearMatchSearchLink()">
           <datalist id="matchList"></datalist>
+          <div id="matchLinkedBadge" class="match-linked-badge" style="display:none;">
+            🔗 Lié à un match réel <span onclick="clearMatchSearchLink()">✕</span>
+          </div>
+          <div id="matchSearchPanel" class="match-search-panel" style="display:none;">
+            <input type="text" id="teamSearchInput" placeholder="Nom de l'équipe (ex: PSG, Lakers…)" autocomplete="off" oninput="onTeamSearchInput(this.value)">
+            <div id="teamSearchResults"></div>
+            <div id="fixtureResults"></div>
+            <div class="seq-hint" id="matchSearchHint">Recherche via une base de données sportive publique — couverture variable selon le sport/la compétition.</div>
+          </div>
         </div>
 
         <div class="form-row">
@@ -1215,6 +1236,169 @@ function resetBetForm(){
   document.querySelector('#addResultPicker .r-pending')?.classList.add('selected');
   document.getElementById('addCashoutWrap')?.classList.remove('show');
   const cv=document.getElementById('fCashoutVal');if(cv)cv.value='';
+  clearMatchSearchLink();
+  document.getElementById('matchSearchPanel').style.display='none';
+  onFSportChange();
+}
+
+// ═══════════════════════════
+//  RECHERCHE DE MATCH RÉEL (ESPN — API publique gratuite, sans clé)
+// ═══════════════════════════
+const ESPN_SEARCH_URL='https://site.api.espn.com/apis/search/v2';
+const ESPN_SITE_BASE='https://site.api.espn.com/apis/site/v2/sports/';
+const ESPN_TEAM_SPORT_MAP={soccer:'Football',basketball:'Basketball',hockey:'Hockey'}; // espn sport key -> app sport label
+const ESPN_TENNIS_TOURS=['atp','wta'];
+const REAL_MATCH_SPORTS=['Football','Tennis','Basketball','Hockey']; // sports where the search UI is offered
+let matchSearchLinked=null; // {eventId, apiSport, apiLeague, date} of the real match linked to the bet being created
+let teamSearchTimer=null;
+const matchScoreCache={};
+function normName(s){return (s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();}
+function namesMatch(a,b){a=normName(a);b=normName(b);return !!a&&!!b&&(a===b||a.includes(b)||b.includes(a));}
+
+function onFSportChange(){
+  const sport=document.getElementById('fSport').value;
+  const toggle=document.getElementById('matchSearchToggle');
+  if(!toggle)return;
+  toggle.style.display=REAL_MATCH_SPORTS.includes(sport)?'':'none';
+  if(!REAL_MATCH_SPORTS.includes(sport)){
+    document.getElementById('matchSearchPanel').style.display='none';
+  }
+}
+function toggleMatchSearch(){
+  const panel=document.getElementById('matchSearchPanel');
+  panel.style.display=panel.style.display==='none'?'':'none';
+  if(panel.style.display!=='none')document.getElementById('teamSearchInput').focus();
+}
+function clearMatchSearchLink(){
+  matchSearchLinked=null;
+  const badge=document.getElementById('matchLinkedBadge');
+  if(badge)badge.style.display='none';
+}
+function onTeamSearchInput(v){
+  clearTimeout(teamSearchTimer);
+  const q=v.trim();
+  if(q.length<2){document.getElementById('teamSearchResults').innerHTML='';return;}
+  teamSearchTimer=setTimeout(()=>searchTeams(q),400);
+}
+async function searchTeams(q){
+  const sport=document.getElementById('fSport').value;
+  const isTennis=sport==='Tennis';
+  const resEl=document.getElementById('teamSearchResults');
+  document.getElementById('fixtureResults').innerHTML='';
+  resEl.innerHTML='<div style="font-size:0.72rem;color:var(--muted);">Recherche…</div>';
+  try{
+    const r=await fetch(ESPN_SEARCH_URL+'?query='+encodeURIComponent(q)+'&limit=15');
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const data=await r.json();
+    const groups=data.results||[];
+    let items=[];
+    if(isTennis){
+      const g=groups.find(g=>g.type==='athlete');
+      items=(g?.contents||[]).filter(p=>p.sport==='tennis');
+    }else{
+      const g=groups.find(g=>g.type==='team');
+      items=(g?.contents||[]).filter(t=>ESPN_TEAM_SPORT_MAP[t.sport]===sport);
+    }
+    items=items.slice(0,8);
+    if(items.length===0){resEl.innerHTML='<div style="font-size:0.72rem;color:var(--muted);">Aucun résultat — saisis le match manuellement.</div>';return;}
+    resEl.innerHTML=items.map(it=>`<div class="team-result-item" onclick='pickTeam(${JSON.stringify({name:it.displayName,sport:isTennis?'tennis':it.sport,league:it.defaultLeagueSlug,isTennis})})'>${it.displayName} <span style="color:var(--muted);font-size:0.68rem;">· ${it.subtitle||''}</span></div>`).join('');
+  }catch(e){
+    resEl.innerHTML='<div style="font-size:0.72rem;color:var(--loss);">Recherche indisponible pour le moment — saisis le match manuellement.</div>';
+  }
+}
+async function pickTeam(info){
+  const resEl=document.getElementById('fixtureResults');
+  resEl.innerHTML='<div style="font-size:0.72rem;color:var(--muted);">Chargement des prochains matchs…</div>';
+  try{
+    const today=new Date();
+    const end=new Date(today.getTime()+21*86400000);
+    const fmt=d=>d.toISOString().slice(0,10).replace(/-/g,'');
+    const range=fmt(today)+'-'+fmt(end);
+    let events=[];
+    if(info.isTennis){
+      for(const tour of ESPN_TENNIS_TOURS){
+        try{
+          const r=await fetch(`${ESPN_SITE_BASE}tennis/${tour}/scoreboard?dates=${range}`);
+          if(!r.ok)continue;
+          const data=await r.json();
+          (data.events||[]).forEach(ev=>{
+            const comps=ev.competitions?.[0]?.competitors||[];
+            if(comps.some(c=>namesMatch(c.athlete?.displayName,info.name)))events.push({...ev,_league:tour});
+          });
+        }catch(e){/* skip this tour */}
+      }
+    }else if(info.league){
+      const r=await fetch(`${ESPN_SITE_BASE}${info.sport}/${info.league}/scoreboard?dates=${range}`);
+      if(r.ok){
+        const data=await r.json();
+        events=(data.events||[]).filter(ev=>{
+          const comps=ev.competitions?.[0]?.competitors||[];
+          return comps.some(c=>namesMatch(c.team?.displayName,info.name));
+        }).map(ev=>({...ev,_league:info.league}));
+      }
+    }
+    if(events.length===0){resEl.innerHTML='<div style="font-size:0.72rem;color:var(--muted);">Aucun match à venir trouvé pour '+info.name+' — saisis le match manuellement.</div>';return;}
+    resEl.innerHTML=events.map(ev=>{
+      const comps=ev.competitions[0].competitors;
+      const home=comps.find(c=>c.homeAway==='home')||comps[0];
+      const away=comps.find(c=>c.homeAway==='away')||comps[1];
+      const homeName=home?.team?.displayName||home?.athlete?.displayName||'?';
+      const awayName=away?.team?.displayName||away?.athlete?.displayName||'?';
+      return `<div class="fixture-result-item" onclick='pickFixture(${JSON.stringify({id:ev.id,home:homeName,away:awayName,date:ev.date,apiSport:info.sport,league:ev._league,appSport:info.isTennis?'Tennis':ESPN_TEAM_SPORT_MAP[info.sport]})})'>
+        <span>${homeName} vs ${awayName}</span>
+        <span class="fixture-result-date">${(ev.date||'').slice(0,10)}</span>
+      </div>`;
+    }).join('');
+  }catch(e){
+    resEl.innerHTML='<div style="font-size:0.72rem;color:var(--loss);">Recherche indisponible pour le moment — saisis le match manuellement.</div>';
+  }
+}
+function pickFixture(ev){
+  if(ev.appSport)document.getElementById('fSport').value=ev.appSport;
+  document.getElementById('fMatch').value=`${ev.home} vs ${ev.away}`;
+  matchSearchLinked={eventId:ev.id,apiSport:ev.apiSport,apiLeague:ev.league,date:ev.date};
+  const badge=document.getElementById('matchLinkedBadge');
+  if(badge)badge.style.display='flex';
+  document.getElementById('matchSearchPanel').style.display='none';
+  document.getElementById('teamSearchInput').value='';
+  document.getElementById('teamSearchResults').innerHTML='';
+  document.getElementById('fixtureResults').innerHTML='';
+}
+function formatEspnScore(comp){
+  const comps=comp.competitors||[];
+  const home=comps.find(c=>c.homeAway==='home')||comps[0];
+  const away=comps.find(c=>c.homeAway==='away')||comps[1];
+  const homeName=home?.team?.displayName||home?.athlete?.displayName||'?';
+  const awayName=away?.team?.displayName||away?.athlete?.displayName||'?';
+  if(Array.isArray(home?.linescores)&&home.linescores.length){
+    // Tennis-style set scores
+    const sets=home.linescores.map((ls,i)=>`${ls.value}-${away.linescores[i]?.value??'?'}`).join(', ');
+    const winner=home.winner?homeName:(away.winner?awayName:null);
+    return {home:homeName,away:awayName,hs:sets,as:winner?`🏆 ${winner}`:''};
+  }
+  return {home:homeName,away:awayName,hs:home?.score,as:away?.score};
+}
+async function checkMatchScores(){
+  const today=new Date().toISOString().slice(0,10);
+  const pending=allBets().filter(b=>b.status==='En cours'&&b.apiEventId&&b.apiSport&&b.apiLeague&&!matchScoreCache[b.apiEventId]&&b.apiEventDate&&b.apiEventDate.slice(0,10)<=today);
+  if(pending.length===0)return;
+  let changed=false;
+  for(const b of pending.slice(0,8)){
+    try{
+      const r=await fetch(`${ESPN_SITE_BASE}${b.apiSport}/${b.apiLeague}/summary?event=${b.apiEventId}`);
+      if(r.ok){
+        const data=await r.json();
+        const comp=data.header?.competitions?.[0];
+        const status=comp?.status?.type;
+        if(comp&&status&&(status.completed===true||/FINAL/i.test(status.name||''))){
+          matchScoreCache[b.apiEventId]=formatEspnScore(comp);
+          changed=true;
+        }
+      }
+    }catch(e){/* silent — best-effort convenience feature */}
+    await new Promise(res=>setTimeout(res,250));
+  }
+  if(changed)renderSequences();
 }
 function updateBookmakerList(){ updateAutocompleteLists(); }
 function updateAutocompleteLists(){
@@ -1302,8 +1486,9 @@ function addBet(){
     seq=state.sequences.find(s=>s.id===parseInt(seqSel));if(!seq){showToast('Séquence introuvable.','#ef4444');return;}
     palier=nextPalierForSeq(seq);
   }
-  const bet={id:Date.now()+Math.floor(Math.random()*1000),sport,match,prono,cote,palier,mise,status,gain:0,bkAfter:currentBK(),cashoutGain,type,combo,bookmaker,note,date:new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})};
+  const bet={id:Date.now()+Math.floor(Math.random()*1000),sport,match,prono,cote,palier,mise,status,gain:0,bkAfter:currentBK(),cashoutGain,type,combo,bookmaker,note,date:new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}),...(betType!=='combine'&&matchSearchLinked?{apiEventId:matchSearchLinked.eventId,apiSport:matchSearchLinked.apiSport,apiLeague:matchSearchLinked.apiLeague,apiEventDate:matchSearchLinked.date}:{})};
   seq.bets.push(bet);
+  matchSearchLinked=null;
   seqPage=0;
   recomputeBK();save();render();
   // Sheets sync
@@ -1689,6 +1874,10 @@ function betStepInner(b,showPalier){
   const comboBadge=b.type==='combine'?'<span class="combo-badge">🔗 Combiné</span>':'';
   const comboDetail=(b.type==='combine'&&Array.isArray(b.combo))?`<div class="combo-list">${b.combo.map(c=>`<div class="combo-item"><span>${c.match}</span><span>@${(c.cote||0).toFixed(2)}</span></div>`).join('')}</div>`:'';
   const palBadge=showPalier?`<span class="step-pal ${seqPalC[(b.palier-1)%seqPalC.length]}">${b.palier}</span>`:'';
+  const cachedScore=(b.status==='En cours'&&b.apiEventId)?matchScoreCache[b.apiEventId]:null;
+  const scoreHint=cachedScore?(b.apiSport==='tennis'
+    ?`<div class="step-score-hint">🎾 Score final : ${cachedScore.home} vs ${cachedScore.away} — ${cachedScore.hs}${cachedScore.as?' '+cachedScore.as:''}</div>`
+    :`<div class="step-score-hint">⚽ Score final : ${cachedScore.home} ${cachedScore.hs} - ${cachedScore.as} ${cachedScore.away}</div>`):'';
   return `<div class="step-top">
       ${palBadge}
       ${comboBadge}
@@ -1704,6 +1893,7 @@ function betStepInner(b,showPalier){
       <span class="step-mise">Mise ${b.mise.toFixed(2)} €</span>
       <span class="step-gain ${gainCls}">${gainStr}</span>
     </div>
+    ${scoreHint}
     <div class="step-actions">${actions}</div>`;
 }
 function renderSequences(){
@@ -2280,8 +2470,9 @@ function goPage(id,el){
   document.getElementById('page-'+id).classList.add('active');
   el.classList.add('active');
   if(id==='stats') render();
-  if(id==='add'){ updateFormSeqSelect(); updateBookmakerList(); }
+  if(id==='add'){ updateFormSeqSelect(); updateBookmakerList(); onFSportChange(); }
   if(id==='cal')   renderCalendar();
+  if(id==='suivi') checkMatchScores();
 }
 
 // ═══════════════════════════
@@ -2808,6 +2999,7 @@ applyBkModeUI();
 recomputeBK();
 updateFormSeqSelect();
 render();
+checkMatchScores();
 sheetsInit();
 </script>
 </body>

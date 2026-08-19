@@ -3,177 +3,37 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Pronos">
 <meta name="theme-color" content="#080b12">
 <title>Pronos Tracker — Suivi</title>
-<style>
-:root{
-  --bg:#080b12;--surface:#0f1420;--card:#141926;--border:#1e2640;--border2:#2a3356;
-  --accent:#4f6ef7;--accent2:#7c8fff;--win:#22c55e;--loss:#ef4444;--cashout:#f59e0b;
-  --pending:#64748b;--text:#e2e8f0;--muted:#64748b;--faint:#1e2640;--radius:12px;
-  --safe-top: env(safe-area-inset-top, 0px);
-  --safe-bot: env(safe-area-inset-bottom, 0px);
-}
-*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
-html,body{min-height:100%;}
-body{font-family:-apple-system,'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);}
-.shell{max-width:480px;margin:0 auto;min-height:100vh;padding:calc(10px + var(--safe-top)) 14px calc(24px + var(--safe-bot));}
 
-.topbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:16px;}
-.logo{font-size:1.05rem;font-weight:800;display:flex;align-items:center;gap:6px;}
-.logo span{color:var(--accent2);}
-.live-pill{display:flex;align-items:center;gap:5px;font-size:0.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;}
-.live-dot{width:6px;height:6px;border-radius:50%;background:var(--win);animation:pulse 2s infinite;}
-@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.35;}}
+<!-- PWA manifest inline -->
+<script>
+const manifestData = {
+  name: "Pronos Tracker — Suivi",
+  short_name: "Pronos Suivi",
+  description: "Suivi partagé (lecture seule)",
+  start_url: location.pathname + location.search,
+  display: "standalone",
+  background_color: "#080b12",
+  theme_color: "#4f6ef7",
+  orientation: "portrait",
+  icons: [
+    { src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='100' fill='%234f6ef7'/%3E%3Ctext x='256' y='320' font-size='280' text-anchor='middle' fill='white'%3E🎯%3C/text%3E%3C/svg%3E", sizes: "512x512", type: "image/svg+xml" }
+  ]
+};
+const blob = new Blob([JSON.stringify(manifestData)], {type:'application/json'});
+const manifestURL = URL.createObjectURL(blob);
+const link = document.createElement('link');
+link.rel = 'manifest'; link.href = manifestURL;
+document.head.appendChild(link);
+</script>
 
-.hero-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:12px;}
-.hero-label{font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;}
-.hero-value{font-size:2.1rem;font-weight:800;font-variant-numeric:tabular-nums;line-height:1;}
-.hero-delta{display:inline-block;margin-top:8px;font-size:0.75rem;font-weight:700;padding:3px 9px;border-radius:20px;}
-.hero-delta.pos{background:rgba(34,197,94,.15);color:var(--win);}
-.hero-delta.neg{background:rgba(239,68,68,.15);color:var(--loss);}
-
-.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:12px;}
-.card-title{font-size:0.72rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px;}
-
-.kpi-scroll{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px;margin-bottom:12px;}
-.kpi-scroll::-webkit-scrollbar{display:none;}
-.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;flex-shrink:0;min-width:120px;}
-.kpi-label{font-size:0.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;}
-.kpi-value{font-size:1.2rem;font-weight:700;font-variant-numeric:tabular-nums;line-height:1;}
-
-.part-summary{font-size:0.72rem;color:var(--muted);margin-bottom:12px;}
-.part-summary b{color:var(--text);font-variant-numeric:tabular-nums;}
-.part-row{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:11px 13px;margin-bottom:8px;}
-.part-row:last-child{margin-bottom:0;}
-.part-row-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;gap:8px;}
-.part-name{font-size:0.85rem;font-weight:700;}
-.part-pct{font-size:0.63rem;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;}
-.part-amounts{display:flex;align-items:center;gap:6px;font-size:0.8rem;font-variant-numeric:tabular-nums;margin-bottom:4px;}
-.part-invested{color:var(--muted);}
-.part-arrow{color:var(--muted);font-size:0.72rem;}
-.part-current{font-weight:700;}
-.part-gain{font-size:0.76rem;font-weight:700;font-variant-numeric:tabular-nums;}
-.part-gain.pos{color:var(--win);}
-.part-gain.neg{color:var(--loss);}
-
-.seq-filter-row{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:12px;}
-.seq-filter-row::-webkit-scrollbar{display:none;}
-.sfchip{padding:5px 12px;border-radius:20px;font-size:0.72rem;font-weight:600;cursor:pointer;background:var(--surface);border:1px solid var(--border);color:var(--muted);white-space:nowrap;transition:all .2s;}
-.sfchip.active{background:var(--accent);color:#fff;border-color:var(--accent);}
-
-.seq-block{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:10px;}
-.seq-block-header{padding:10px 12px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border);}
-.seq-block-id{font-size:0.67rem;color:var(--muted);font-weight:700;}
-.seq-badge{font-size:0.67rem;padding:2px 8px;border-radius:20px;font-weight:600;}
-.ss-open{background:rgba(100,116,139,.15);color:var(--pending);}
-.ss-won{background:rgba(34,197,94,.15);color:var(--win);}
-.ss-lost{background:rgba(239,68,68,.15);color:var(--loss);}
-.seq-gain{margin-left:auto;font-size:0.75rem;font-weight:700;}
-.seq-step{border-bottom:1px solid var(--faint);padding:10px 12px;}
-.seq-step:last-child{border-bottom:none;}
-.step-top{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
-.step-pal{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;font-size:0.7rem;font-weight:700;flex-shrink:0;}
-.p1{background:rgba(34,197,94,.15);color:#22c55e;}
-.p2{background:rgba(132,204,22,.15);color:#84cc16;}
-.p3{background:rgba(234,179,8,.15);color:#eab308;}
-.p4{background:rgba(249,115,22,.15);color:#f97316;}
-.p5{background:rgba(239,68,68,.15);color:#ef4444;}
-.p6{background:rgba(167,139,250,.15);color:#a78bfa;}
-.step-match{font-size:0.82rem;font-weight:600;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.step-meta{font-size:0.65rem;color:var(--muted);margin-bottom:6px;}
-.step-nums{display:flex;align-items:center;gap:10px;}
-.step-cote{font-size:0.78rem;font-weight:600;color:var(--accent2);}
-.step-mise{font-size:0.78rem;color:var(--text);}
-.step-gain{font-size:0.8rem;font-weight:700;}
-.step-gain.pos{color:var(--win);}
-.step-gain.neg{color:var(--loss);}
-.status-badge{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:20px;font-size:0.67rem;font-weight:600;}
-.s-win{background:rgba(34,197,94,.15);color:var(--win);}
-.s-loss{background:rgba(239,68,68,.15);color:var(--loss);}
-.s-cashout{background:rgba(245,158,11,.15);color:var(--cashout);}
-.s-pending{background:rgba(100,116,139,.15);color:var(--pending);}
-
-.empty{text-align:center;padding:36px 20px;color:var(--muted);}
-.empty-icon{font-size:2.2rem;margin-bottom:8px;}
-
-.setup-card{background:var(--card);border:1px solid var(--border2);border-radius:var(--radius);padding:16px;margin-bottom:12px;}
-.setup-card label{display:block;font-size:0.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;}
-.setup-card input{width:100%;background:var(--surface);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-size:0.85rem;padding:10px 12px;outline:none;margin-bottom:10px;font-family:monospace;}
-.setup-card button{width:100%;padding:12px;border:none;border-radius:10px;background:var(--accent);color:#fff;font-size:0.9rem;font-weight:700;cursor:pointer;}
-.setup-hint{font-size:0.7rem;color:var(--muted);line-height:1.5;margin-top:10px;}
-
-.footer-note{text-align:center;font-size:0.65rem;color:var(--muted);margin-top:16px;}
-.refresh-row{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:10px;}
-.refresh-btn{background:var(--surface);border:1px solid var(--border);color:var(--muted);font-size:0.68rem;padding:6px 12px;border-radius:20px;cursor:pointer;}
-
-.donut-row{display:flex;flex-direction:column;align-items:center;gap:14px;}
-.donut-legend{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%;}
-.dl-item{display:flex;align-items:center;gap:7px;font-size:0.75rem;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 10px;}
-.dl-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
-.dl-label{color:var(--muted);}
-.dl-val{font-weight:700;margin-left:auto;}
-</style>
-</head>
-<body>
-<div class="shell">
-  <div class="topbar">
-    <div class="logo">🎯 <span>Pronos</span> — Suivi</div>
-    <div class="live-pill"><span class="live-dot" id="liveDot"></span><span id="liveLabel">connexion…</span></div>
-  </div>
-
-  <div id="setupZone" style="display:none;">
-    <div class="setup-card">
-      <label>Adresse de la base (fournie par le propriétaire)</label>
-      <input type="text" id="dbUrlInput" placeholder="https://xxxx-default-rtdb.firebasedatabase.app">
-      <button onclick="connectManual()">Se connecter au suivi</button>
-      <div class="setup-hint">Ce lien te a été envoyé par la personne qui gère la martingale. Colle-le ici une seule fois — ton navigateur s'en souviendra.</div>
-    </div>
-  </div>
-
-  <div id="app" style="display:none;">
-    <div class="hero-card">
-      <div class="hero-label">Bankroll actuelle</div>
-      <div class="hero-value" id="topBK">— €</div>
-      <div class="hero-delta" id="topDelta"></div>
-    </div>
-
-    <div id="participantsCard" style="display:none;">
-      <div class="card">
-        <div class="card-title">👥 Répartition participants</div>
-        <div class="part-summary" id="participantsSummary"></div>
-        <div id="participantsTable"></div>
-      </div>
-    </div>
-
-    <div class="kpi-scroll" id="kpiScroll"></div>
-
-    <div class="card">
-      <div class="card-title">Évolution de la bankroll</div>
-      <canvas id="mainChart" height="130"></canvas>
-    </div>
-
-    <div class="card">
-      <div class="card-title">Résultats</div>
-      <div class="donut-row">
-        <canvas id="pieChart" width="150" height="150"></canvas>
-        <div class="donut-legend" id="donutLegend"></div>
-      </div>
-    </div>
-
-    <div class="seq-filter-row">
-      <div class="sfchip active" data-f="" onclick="setFilter('',this)">Toutes</div>
-      <div class="sfchip" data-f="open" onclick="setFilter('open',this)">En cours</div>
-      <div class="sfchip" data-f="won" onclick="setFilter('won',this)">Gagnées ✅</div>
-      <div class="sfchip" data-f="lost" onclick="setFilter('lost',this)">Perdues ❌</div>
-    </div>
-    <div id="seqTree"></div>
-
-    <div class="refresh-row">
-      <span class="footer-note" id="lastUpdate"></span>
-      <div class="refresh-btn" onclick="fetchState(true)">↻ Actualiser</div>
-    </div>
-  </div>
-</div>
+<!-- Apple touch icon SVG inline via data URI -->
+<link rel="apple-touch-icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMAAAADACAYAAABS3GwHAAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAALEgAACxIB0t1+/AAAABZ0RVh0Q3JlYXRpb24gVGltZQAwOC8yMy8yNFbAGE8AAAAcdEVYdFNvZnR3YXJlAEFkb2JlIEZpcmV3b3JrcyBDUzYGmCa3AAAFhklEQVR4nO3BMQEAAADCoPVP7WsIoAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAeAMBuAABHgAAAABJRU5ErkJggg==">
 
 <script>
 /*!
@@ -191,18 +51,568 @@ body{font-family:-apple-system,'Segoe UI',system-ui,sans-serif;background:var(--
 `):i}function Pr(i,t){const{element:e,datasetIndex:s,index:n}=t,o=i.getDatasetMeta(s).controller,{label:a,value:r}=o.getLabelAndValue(n);return{chart:i,label:a,parsed:o.getParsed(n),raw:i.data.datasets[s].data[n],formattedValue:r,dataset:o.getDataset(),dataIndex:n,datasetIndex:s,element:e}}function Bo(i,t){const e=i.chart.ctx,{body:s,footer:n,title:o}=i,{boxWidth:a,boxHeight:r}=t,l=X(t.bodyFont),h=X(t.titleFont),d=X(t.footerFont),c=o.length,u=n.length,f=s.length,p=G(t.padding);let g=p.height,m=0,b=s.reduce(((x,v)=>x+v.before.length+v.lines.length+v.after.length),0);b+=i.beforeBody.length+i.afterBody.length,c&&(g+=c*h.lineHeight+(c-1)*t.titleSpacing+t.titleMarginBottom),b&&(g+=f*(t.displayColors?Math.max(r,l.lineHeight):l.lineHeight)+(b-f)*l.lineHeight+(b-1)*t.bodySpacing),u&&(g+=t.footerMarginTop+u*d.lineHeight+(u-1)*t.footerSpacing);let y=0;const _=function(x){m=Math.max(m,e.measureText(x).width+y)};return e.save(),e.font=h.string,F(i.title,_),e.font=l.string,F(i.beforeBody.concat(i.afterBody),_),y=t.displayColors?a+2+t.boxPadding:0,F(s,(x=>{F(x.before,_),F(x.lines,_),F(x.after,_)})),y=0,e.font=d.string,F(i.footer,_),e.restore(),m+=p.width,{width:m,height:g}}function Dr(i,t,e,s){const{x:n,width:o}=e,{width:a,chartArea:{left:r,right:l}}=i;let h="center";return s==="center"?h=n<=(r+l)/2?"left":"right":n<=o/2?h="left":n>=a-o/2&&(h="right"),(function(d,c,u,f){const{x:p,width:g}=f,m=u.caretSize+u.caretPadding;return d==="left"&&p+g+m>c.width||d==="right"&&p-g-m<0||void 0})(h,i,t,e)&&(h="center"),h}function Wo(i,t,e){const s=e.yAlign||t.yAlign||(function(n,o){const{y:a,height:r}=o;return a<r/2?"top":a>n.height-r/2?"bottom":"center"})(i,e);return{xAlign:e.xAlign||t.xAlign||Dr(i,t,e,s),yAlign:s}}function No(i,t,e,s){const{caretSize:n,caretPadding:o,cornerRadius:a}=i,{xAlign:r,yAlign:l}=e,h=n+o,{topLeft:d,topRight:c,bottomLeft:u,bottomRight:f}=It(a);let p=(function(m,b){let{x:y,width:_}=m;return b==="right"?y-=_:b==="center"&&(y-=_/2),y})(t,r);const g=(function(m,b,y){let{y:_,height:x}=m;return b==="top"?_+=y:_-=b==="bottom"?x+y:x/2,_})(t,l,h);return l==="center"?r==="left"?p+=h:r==="right"&&(p-=h):r==="left"?p-=Math.max(d,u)+n:r==="right"&&(p+=Math.max(c,f)+n),{x:q(p,0,s.width-t.width),y:q(g,0,s.height-t.height)}}function oi(i,t,e){const s=G(e.padding);return t==="center"?i.x+i.width/2:t==="right"?i.x+i.width-s.right:i.x+s.left}function Ho(i){return yt([],Dt(i))}function jo(i,t){const e=t&&t.dataset&&t.dataset.tooltip&&t.dataset.tooltip.callbacks;return e?i.override(e):i}const $o={beforeTitle:J,title(i){if(i.length>0){const t=i[0],e=t.chart.data.labels,s=e?e.length:0;if(this&&this.options&&this.options.mode==="dataset")return t.dataset.label||"";if(t.label)return t.label;if(s>0&&t.dataIndex<s)return e[t.dataIndex]}return""},afterTitle:J,beforeBody:J,beforeLabel:J,label(i){if(this&&this.options&&this.options.mode==="dataset")return i.label+": "+i.formattedValue||i.formattedValue;let t=i.dataset.label||"";t&&(t+=": ");const e=i.formattedValue;return I(e)||(t+=e),t},labelColor(i){const t=i.chart.getDatasetMeta(i.datasetIndex).controller.getStyle(i.dataIndex);return{borderColor:t.borderColor,backgroundColor:t.backgroundColor,borderWidth:t.borderWidth,borderDash:t.borderDash,borderDashOffset:t.borderDashOffset,borderRadius:0}},labelTextColor(){return this.options.bodyColor},labelPointStyle(i){const t=i.chart.getDatasetMeta(i.datasetIndex).controller.getStyle(i.dataIndex);return{pointStyle:t.pointStyle,rotation:t.rotation}},afterLabel:J,afterBody:J,beforeFooter:J,footer:J,afterFooter:J};function st(i,t,e,s){const n=i[t].call(e,s);return n===void 0?$o[t].call(e,s):n}class Yo extends _t{static positioners=ke;constructor(t){super(),this.opacity=0,this._active=[],this._eventPosition=void 0,this._size=void 0,this._cachedAnimations=void 0,this._tooltipItems=[],this.$animations=void 0,this.$context=void 0,this.chart=t.chart,this.options=t.options,this.dataPoints=void 0,this.title=void 0,this.beforeBody=void 0,this.body=void 0,this.afterBody=void 0,this.footer=void 0,this.xAlign=void 0,this.yAlign=void 0,this.x=void 0,this.y=void 0,this.height=void 0,this.width=void 0,this.caretX=void 0,this.caretY=void 0,this.labelColors=void 0,this.labelPointStyles=void 0,this.labelTextColors=void 0}initialize(t){this.options=t,this._cachedAnimations=void 0,this.$context=void 0}_resolveAnimations(){const t=this._cachedAnimations;if(t)return t;const e=this.chart,s=this.options.setContext(this.getContext()),n=s.enabled&&e.options.animation&&s.animations,o=new $i(this.chart,n);return n._cacheable&&(this._cachedAnimations=Object.freeze(o)),o}getContext(){return this.$context||(this.$context=(t=this.chart.getContext(),e=this,s=this._tooltipItems,St(t,{tooltip:e,tooltipItems:s,type:"tooltip"})));var t,e,s}getTitle(t,e){const{callbacks:s}=e,n=st(s,"beforeTitle",this,t),o=st(s,"title",this,t),a=st(s,"afterTitle",this,t);let r=[];return r=yt(r,Dt(n)),r=yt(r,Dt(o)),r=yt(r,Dt(a)),r}getBeforeBody(t,e){return Ho(st(e.callbacks,"beforeBody",this,t))}getBody(t,e){const{callbacks:s}=e,n=[];return F(t,(o=>{const a={before:[],lines:[],after:[]},r=jo(s,o);yt(a.before,Dt(st(r,"beforeLabel",this,o))),yt(a.lines,st(r,"label",this,o)),yt(a.after,Dt(st(r,"afterLabel",this,o))),n.push(a)})),n}getAfterBody(t,e){return Ho(st(e.callbacks,"afterBody",this,t))}getFooter(t,e){const{callbacks:s}=e,n=st(s,"beforeFooter",this,t),o=st(s,"footer",this,t),a=st(s,"afterFooter",this,t);let r=[];return r=yt(r,Dt(n)),r=yt(r,Dt(o)),r=yt(r,Dt(a)),r}_createItems(t){const e=this._active,s=this.chart.data,n=[],o=[],a=[];let r,l,h=[];for(r=0,l=e.length;r<l;++r)h.push(Pr(this.chart,e[r]));return t.filter&&(h=h.filter(((d,c,u)=>t.filter(d,c,u,s)))),t.itemSort&&(h=h.sort(((d,c)=>t.itemSort(d,c,s)))),F(h,(d=>{const c=jo(t.callbacks,d);n.push(st(c,"labelColor",this,d)),o.push(st(c,"labelPointStyle",this,d)),a.push(st(c,"labelTextColor",this,d))})),this.labelColors=n,this.labelPointStyles=o,this.labelTextColors=a,this.dataPoints=h,h}update(t,e){const s=this.options.setContext(this.getContext()),n=this._active;let o,a=[];if(n.length){const r=ke[s.position].call(this,n,this._eventPosition);a=this._createItems(s),this.title=this.getTitle(a,s),this.beforeBody=this.getBeforeBody(a,s),this.body=this.getBody(a,s),this.afterBody=this.getAfterBody(a,s),this.footer=this.getFooter(a,s);const l=this._size=Bo(this,s),h=Object.assign({},r,l),d=Wo(this.chart,s,h),c=No(s,h,d,this.chart);this.xAlign=d.xAlign,this.yAlign=d.yAlign,o={opacity:1,x:c.x,y:c.y,width:l.width,height:l.height,caretX:r.x,caretY:r.y}}else this.opacity!==0&&(o={opacity:0});this._tooltipItems=a,this.$context=void 0,o&&this._resolveAnimations().update(this,o),t&&s.external&&s.external.call(this,{chart:this.chart,tooltip:this,replay:e})}drawCaret(t,e,s,n){const o=this.getCaretPosition(t,s,n);e.lineTo(o.x1,o.y1),e.lineTo(o.x2,o.y2),e.lineTo(o.x3,o.y3)}getCaretPosition(t,e,s){const{xAlign:n,yAlign:o}=this,{caretSize:a,cornerRadius:r}=s,{topLeft:l,topRight:h,bottomLeft:d,bottomRight:c}=It(r),{x:u,y:f}=t,{width:p,height:g}=e;let m,b,y,_,x,v;return o==="center"?(x=f+g/2,n==="left"?(m=u,b=m-a,_=x+a,v=x-a):(m=u+p,b=m+a,_=x-a,v=x+a),y=m):(b=n==="left"?u+Math.max(l,d)+a:n==="right"?u+p-Math.max(h,c)-a:this.caretX,o==="top"?(_=f,x=_-a,m=b-a,y=b+a):(_=f+g,x=_+a,m=b+a,y=b-a),v=_),{x1:m,x2:b,x3:y,y1:_,y2:x,y3:v}}drawTitle(t,e,s){const n=this.title,o=n.length;let a,r,l;if(o){const h=Ht(s.rtl,this.x,this.width);for(t.x=oi(this,s.titleAlign,s),e.textAlign=h.textAlign(s.titleAlign),e.textBaseline="middle",a=X(s.titleFont),r=s.titleSpacing,e.fillStyle=s.titleColor,e.font=a.string,l=0;l<o;++l)e.fillText(n[l],h.x(t.x),t.y+a.lineHeight/2),t.y+=a.lineHeight+r,l+1===o&&(t.y+=s.titleMarginBottom-r)}}_drawColorBox(t,e,s,n,o){const a=this.labelColors[s],r=this.labelPointStyles[s],{boxHeight:l,boxWidth:h}=o,d=X(o.bodyFont),c=oi(this,"left",o),u=n.x(c),f=l<d.lineHeight?(d.lineHeight-l)/2:0,p=e.y+f;if(o.usePointStyle){const g={radius:Math.min(h,l)/2,pointStyle:r.pointStyle,rotation:r.rotation,borderWidth:1},m=n.leftForLtr(u,h)+h/2,b=p+l/2;t.strokeStyle=o.multiKeyBackground,t.fillStyle=o.multiKeyBackground,We(t,g,m,b),t.strokeStyle=a.borderColor,t.fillStyle=a.backgroundColor,We(t,g,m,b)}else{t.lineWidth=R(a.borderWidth)?Math.max(...Object.values(a.borderWidth)):a.borderWidth||1,t.strokeStyle=a.borderColor,t.setLineDash(a.borderDash||[]),t.lineDashOffset=a.borderDashOffset||0;const g=n.leftForLtr(u,h),m=n.leftForLtr(n.xPlus(u,1),h-2),b=It(a.borderRadius);Object.values(b).some((y=>y!==0))?(t.beginPath(),t.fillStyle=o.multiKeyBackground,Qt(t,{x:g,y:p,w:h,h:l,radius:b}),t.fill(),t.stroke(),t.fillStyle=a.backgroundColor,t.beginPath(),Qt(t,{x:m,y:p+1,w:h-2,h:l-2,radius:b}),t.fill()):(t.fillStyle=o.multiKeyBackground,t.fillRect(g,p,h,l),t.strokeRect(g,p,h,l),t.fillStyle=a.backgroundColor,t.fillRect(m,p+1,h-2,l-2))}t.fillStyle=this.labelTextColors[s]}drawBody(t,e,s){const{body:n}=this,{bodySpacing:o,bodyAlign:a,displayColors:r,boxHeight:l,boxWidth:h,boxPadding:d}=s,c=X(s.bodyFont);let u=c.lineHeight,f=0;const p=Ht(s.rtl,this.x,this.width),g=function(k){e.fillText(k,p.x(t.x+f),t.y+u/2),t.y+=u+o},m=p.textAlign(a);let b,y,_,x,v,M,w;for(e.textAlign=a,e.textBaseline="middle",e.font=c.string,t.x=oi(this,m,s),e.fillStyle=s.bodyColor,F(this.beforeBody,g),f=r&&m!=="right"?a==="center"?h/2+d:h+2+d:0,x=0,M=n.length;x<M;++x){for(b=n[x],y=this.labelTextColors[x],e.fillStyle=y,F(b.before,g),_=b.lines,r&&_.length&&(this._drawColorBox(e,t,x,p,s),u=Math.max(c.lineHeight,l)),v=0,w=_.length;v<w;++v)g(_[v]),u=c.lineHeight;F(b.after,g)}f=0,u=c.lineHeight,F(this.afterBody,g),t.y-=o}drawFooter(t,e,s){const n=this.footer,o=n.length;let a,r;if(o){const l=Ht(s.rtl,this.x,this.width);for(t.x=oi(this,s.footerAlign,s),t.y+=s.footerMarginTop,e.textAlign=l.textAlign(s.footerAlign),e.textBaseline="middle",a=X(s.footerFont),e.fillStyle=s.footerColor,e.font=a.string,r=0;r<o;++r)e.fillText(n[r],l.x(t.x),t.y+a.lineHeight/2),t.y+=a.lineHeight+s.footerSpacing}}drawBackground(t,e,s,n){const{xAlign:o,yAlign:a}=this,{x:r,y:l}=t,{width:h,height:d}=s,{topLeft:c,topRight:u,bottomLeft:f,bottomRight:p}=It(n.cornerRadius);e.fillStyle=n.backgroundColor,e.strokeStyle=n.borderColor,e.lineWidth=n.borderWidth,e.beginPath(),e.moveTo(r+c,l),a==="top"&&this.drawCaret(t,e,s,n),e.lineTo(r+h-u,l),e.quadraticCurveTo(r+h,l,r+h,l+u),a==="center"&&o==="right"&&this.drawCaret(t,e,s,n),e.lineTo(r+h,l+d-p),e.quadraticCurveTo(r+h,l+d,r+h-p,l+d),a==="bottom"&&this.drawCaret(t,e,s,n),e.lineTo(r+f,l+d),e.quadraticCurveTo(r,l+d,r,l+d-f),a==="center"&&o==="left"&&this.drawCaret(t,e,s,n),e.lineTo(r,l+c),e.quadraticCurveTo(r,l,r+c,l),e.closePath(),e.fill(),n.borderWidth>0&&e.stroke()}_updateAnimationTarget(t){const e=this.chart,s=this.$animations,n=s&&s.x,o=s&&s.y;if(n||o){const a=ke[t.position].call(this,this._active,this._eventPosition);if(!a)return;const r=this._size=Bo(this,t),l=Object.assign({},a,this._size),h=Wo(e,t,l),d=No(t,l,h,e);n._to===d.x&&o._to===d.y||(this.xAlign=h.xAlign,this.yAlign=h.yAlign,this.width=r.width,this.height=r.height,this.caretX=a.x,this.caretY=a.y,this._resolveAnimations().update(this,d))}}_willRender(){return!!this.opacity}draw(t){const e=this.options.setContext(this.getContext());let s=this.opacity;if(!s)return;this._updateAnimationTarget(e);const n={width:this.width,height:this.height},o={x:this.x,y:this.y};s=Math.abs(s)<.001?0:s;const a=G(e.padding),r=this.title.length||this.beforeBody.length||this.body.length||this.afterBody.length||this.footer.length;e.enabled&&r&&(t.save(),t.globalAlpha=s,this.drawBackground(o,t,n,e),zi(t,e.textDirection),o.y+=a.top,this.drawTitle(o,t,e),this.drawBody(o,t,e),this.drawFooter(o,t,e),Fi(t,e.textDirection),t.restore())}getActiveElements(){return this._active||[]}setActiveElements(t,e){const s=this._active,n=t.map((({datasetIndex:r,index:l})=>{const h=this.chart.getDatasetMeta(r);if(!h)throw new Error("Cannot find a dataset at index "+r);return{datasetIndex:r,element:h.data[l],index:l}})),o=!ne(s,n),a=this._positionChanged(n,e);(o||a)&&(this._active=n,this._eventPosition=e,this._ignoreReplayEvents=!0,this.update(!0))}handleEvent(t,e,s=!0){if(e&&this._ignoreReplayEvents)return!1;this._ignoreReplayEvents=!1;const n=this.options,o=this._active||[],a=this._getActiveElements(t,o,e,s),r=this._positionChanged(a,t),l=e||!ne(a,o)||r;return l&&(this._active=a,(n.enabled||n.external)&&(this._eventPosition={x:t.x,y:t.y},this.update(!0,e))),l}_getActiveElements(t,e,s,n){const o=this.options;if(t.type==="mouseout")return[];if(!n)return e.filter((r=>this.chart.data.datasets[r.datasetIndex]&&this.chart.getDatasetMeta(r.datasetIndex).controller.getParsed(r.index)!==void 0));const a=this.chart.getElementsAtEventForMode(t,o.mode,o,s);return o.reverse&&a.reverse(),a}_positionChanged(t,e){const{caretX:s,caretY:n,options:o}=this,a=ke[o.position].call(this,t,e);return a!==!1&&(s!==a.x||n!==a.y)}}var Cr={id:"tooltip",_element:Yo,positioners:ke,afterInit(i,t,e){e&&(i.tooltip=new Yo({chart:i,options:e}))},beforeUpdate(i,t,e){i.tooltip&&i.tooltip.initialize(e)},reset(i,t,e){i.tooltip&&i.tooltip.initialize(e)},afterDraw(i){const t=i.tooltip;if(t&&t._willRender()){const e={tooltip:t};if(i.notifyPlugins("beforeTooltipDraw",{...e,cancelable:!0})===!1)return;t.draw(i.ctx),i.notifyPlugins("afterTooltipDraw",e)}},afterEvent(i,t){if(i.tooltip){const e=t.replay;i.tooltip.handleEvent(t.event,e,t.inChartArea)&&(t.changed=!0)}},defaults:{enabled:!0,external:null,position:"average",backgroundColor:"rgba(0,0,0,0.8)",titleColor:"#fff",titleFont:{weight:"bold"},titleSpacing:2,titleMarginBottom:6,titleAlign:"left",bodyColor:"#fff",bodySpacing:2,bodyFont:{},bodyAlign:"left",footerColor:"#fff",footerSpacing:2,footerMarginTop:6,footerFont:{weight:"bold"},footerAlign:"left",padding:6,caretPadding:2,caretSize:5,cornerRadius:6,boxHeight:(i,t)=>t.bodyFont.size,boxWidth:(i,t)=>t.bodyFont.size,multiKeyBackground:"#fff",displayColors:!0,boxPadding:0,borderColor:"rgba(0,0,0,0)",borderWidth:0,animation:{duration:400,easing:"easeOutQuart"},animations:{numbers:{type:"number",properties:["x","y","width","height","caretX","caretY"]},opacity:{easing:"linear",duration:200}},callbacks:$o},defaultRoutes:{bodyFont:"font",footerFont:"font",titleFont:"font"},descriptors:{_scriptable:i=>i!=="filter"&&i!=="itemSort"&&i!=="external",_indexable:!1,callbacks:{_scriptable:!1,_indexable:!1},animation:{_fallback:!1},animations:{_fallback:"animation"}},additionalOptionScopes:["interaction"]};return U.register(oo,Mo,es,se),U.helpers={...xa},U._adapters=Jn,U.Animation=Cn,U.Animations=$i,U.animator=bt,U.controllers=ct.controllers.items,U.DatasetController=Pt,U.Element=_t,U.elements=es,U.Interaction=fn,U.layouts=Z,U.platforms=Pn,U.Scale=zt,U.Ticks=ce,Object.assign(U,oo,Mo,es,se,Pn),U.Chart=U,typeof window<"u"&&(window.Chart=U),U}));
 
 </script>
+<style>
+:root{
+  --bg:#080b12;--surface:#0f1420;--card:#141926;--border:#1e2640;--border2:#2a3356;
+  --accent:#4f6ef7;--accent2:#7c8fff;--win:#22c55e;--loss:#ef4444;--cashout:#f59e0b;
+  --pending:#64748b;--text:#e2e8f0;--muted:#64748b;--faint:#1e2640;--radius:12px;
+  --nav-h:60px;--top-h:52px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bot: env(safe-area-inset-bottom, 0px);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;overflow:hidden;}
+body{font-family:-apple-system,'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);}
+
+/* ── SHELL ── */
+.shell{display:flex;flex-direction:column;height:100%;height:100dvh;}
+
+/* ── TOPBAR ── */
+.topbar{
+  flex-shrink:0;
+  background:var(--surface);border-bottom:1px solid var(--border);
+  padding:0 16px;padding-top:var(--safe-top);
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  height:calc(var(--top-h) + var(--safe-top));
+}
+.logo{font-size:1rem;font-weight:800;display:flex;align-items:center;gap:6px;}
+.logo span{color:var(--accent2);}
+.bk-pill{display:flex;align-items:center;gap:6px;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:5px 10px;min-width:0;}
+.bk-label{font-size:0.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;flex-shrink:0;}
+.bk-value{font-size:1rem;font-weight:700;color:var(--win);font-variant-numeric:tabular-nums;}
+.bk-delta{font-size:0.65rem;padding:1px 6px;border-radius:20px;font-weight:600;flex-shrink:0;}
+.bk-delta.pos{background:rgba(34,197,94,.15);color:var(--win);}
+.bk-delta.neg{background:rgba(239,68,68,.15);color:var(--loss);}
+.icon-btn{background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--muted);font-size:1.1rem;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;}
+
+/* ── PAGES CONTAINER ── */
+.pages{flex:1;overflow:hidden;position:relative;}
+.page{position:absolute;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch;display:none;padding:14px 14px 16px;}
+.page.active{display:block;}
+.page::-webkit-scrollbar{display:none;}
+
+/* ── BOTTOM NAV ── */
+.bottom-nav{
+  flex-shrink:0;
+  background:var(--surface);border-top:1px solid var(--border);
+  display:flex;
+  padding-bottom:var(--safe-bot);
+  height:calc(var(--nav-h) + var(--safe-bot));
+}
+.bnav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;transition:all .15s;padding:6px 0;border:none;background:transparent;}
+.bnav-icon{font-size:1.4rem;transition:transform .2s;}
+.bnav-label{font-size:0.6rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;transition:color .2s;}
+.bnav-item.active .bnav-icon{transform:scale(1.15);}
+.bnav-item.active .bnav-label{color:var(--accent2);}
+
+/* ── KPIs ── */
+.kpi-scroll{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px;margin-bottom:14px;scroll-snap-type:x mandatory;}
+.kpi-scroll::-webkit-scrollbar{display:none;}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;position:relative;overflow:hidden;flex-shrink:0;scroll-snap-align:start;min-width:130px;}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
+.kpi.win::before{background:linear-gradient(90deg,#166534,var(--win));}
+.kpi.gold::before{background:linear-gradient(90deg,#78350f,var(--cashout));}
+.kpi.blue::before{background:linear-gradient(90deg,#1e3a8a,var(--accent2));}
+.kpi.pur::before{background:linear-gradient(90deg,#4c1d95,#a78bfa);}
+.kpi.red::before{background:linear-gradient(90deg,#7f1d1d,var(--loss));}
+.kpi-label{font-size:0.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;}
+.kpi-value{font-size:1.25rem;font-weight:700;font-variant-numeric:tabular-nums;line-height:1;}
+.kpi-sub{font-size:0.6rem;color:var(--muted);margin-top:3px;}
+.kpi.win .kpi-value{color:var(--win);}
+.kpi.gold .kpi-value{color:var(--cashout);}
+.kpi.blue .kpi-value{color:var(--accent2);}
+.kpi.pur .kpi-value{color:#a78bfa;}
+.kpi.red .kpi-value{color:var(--loss);}
+
+/* ── CARD ── */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:12px;}
+.card-title{font-size:0.72rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:8px;}
+
+/* ── FORM ── */
+.form-row{margin-bottom:10px;}
+.form-row label{display:block;font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;}
+.form-row input,.form-row select{
+  width:100%;background:var(--surface);border:1px solid var(--border2);
+  border-radius:8px;color:var(--text);font-size:1rem;padding:10px 12px;
+  outline:none;transition:border-color .2s;-webkit-appearance:none;appearance:none;
+}
+.form-row input:focus,.form-row select:focus{border-color:var(--accent);}
+.form-grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.mise-info{background:var(--surface);border:1px solid var(--border2);border-radius:8px;padding:10px 12px;display:flex;justify-content:space-between;align-items:center;}
+.mise-mv{font-size:1.05rem;font-weight:700;color:var(--accent2);}
+.mise-ms{font-size:0.65rem;color:var(--muted);}
+.seq-hint{font-size:0.65rem;color:var(--muted);margin-top:4px;line-height:1.4;}
+
+/* ── PARTICIPANTS (settings form) ── */
+.part-set-row{display:flex;gap:6px;align-items:center;margin-bottom:8px;}
+.part-set-row input{background:var(--surface);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-size:0.88rem;padding:9px 10px;outline:none;-webkit-appearance:none;appearance:none;}
+.part-set-name{flex:1.4;min-width:0;}
+.part-set-amount{flex:1;min-width:0;}
+.part-set-del{flex-shrink:0;width:36px;height:36px;border-radius:8px;background:var(--surface);border:1px solid var(--border);color:var(--loss);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:0.9rem;}
+.part-total-line{font-size:0.7rem;color:var(--muted);margin-top:2px;}
+.part-total-line b{color:var(--text);font-variant-numeric:tabular-nums;}
+.part-empty{font-size:0.75rem;color:var(--muted);padding:6px 0 12px;}
+
+/* ── PARTICIPANTS (stats table) ── */
+.part-summary{font-size:0.72rem;color:var(--muted);margin-bottom:12px;}
+.part-summary b{color:var(--text);font-variant-numeric:tabular-nums;}
+.part-row{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:11px 13px;margin-bottom:8px;}
+.part-row:last-child{margin-bottom:0;}
+.part-row-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;gap:8px;}
+.part-name{font-size:0.85rem;font-weight:700;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.part-pct{font-size:0.63rem;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;flex-shrink:0;}
+.part-amounts{display:flex;align-items:center;gap:6px;font-size:0.8rem;font-variant-numeric:tabular-nums;margin-bottom:4px;}
+.part-invested{color:var(--muted);}
+.part-arrow{color:var(--muted);font-size:0.72rem;}
+.part-current{font-weight:700;}
+.part-gain{font-size:0.76rem;font-weight:700;font-variant-numeric:tabular-nums;}
+.part-gain.pos{color:var(--win);}
+.part-gain.neg{color:var(--loss);}
+
+.btn{width:100%;padding:13px;border:none;border-radius:10px;font-size:0.95rem;font-weight:700;cursor:pointer;transition:all .15s;letter-spacing:.2px;}
+.btn-primary{background:var(--accent);color:#fff;}
+.btn-primary:active{background:#3d5ce0;transform:scale(0.98);}
+.btn-ghost{background:var(--surface);color:var(--muted);border:1px solid var(--border);}
+
+/* ── ACTION BUTTONS ── */
+.btn-sm{padding:6px 10px;border:none;border-radius:7px;font-size:0.72rem;font-weight:600;cursor:pointer;transition:all .1s;white-space:nowrap;}
+.btn-win{background:rgba(34,197,94,.15);color:var(--win);border:1px solid rgba(34,197,94,.3);}
+.btn-loss{background:rgba(239,68,68,.15);color:var(--loss);border:1px solid rgba(239,68,68,.3);}
+.btn-cash{background:rgba(245,158,11,.15);color:var(--cashout);border:1px solid rgba(245,158,11,.3);}
+.btn-edit{background:rgba(79,110,247,.15);color:var(--accent2);border:1px solid rgba(79,110,247,.3);}
+.btn-del{background:rgba(100,116,139,.1);color:var(--muted);border:1px solid var(--border);}
+.btn-sm:active{opacity:.7;transform:scale(0.95);}
+
+/* ── SEQUENCES ── */
+.seq-filter-row{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:12px;}
+.seq-filter-row::-webkit-scrollbar{display:none;}
+.sfchip{padding:5px 12px;border-radius:20px;font-size:0.72rem;font-weight:600;cursor:pointer;background:var(--surface);border:1px solid var(--border);color:var(--muted);white-space:nowrap;transition:all .2s;}
+.sfchip.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+
+.seq-block{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:10px;}
+.seq-block-header{padding:10px 12px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border);}
+.seq-block-id{font-size:0.67rem;color:var(--muted);font-weight:700;}
+.seq-badge{font-size:0.67rem;padding:2px 8px;border-radius:20px;font-weight:600;}
+.ss-open{background:rgba(100,116,139,.15);color:var(--pending);}
+.ss-won{background:rgba(34,197,94,.15);color:var(--win);}
+.ss-lost{background:rgba(239,68,68,.15);color:var(--loss);}
+.seq-gain{margin-left:auto;font-size:0.75rem;font-weight:700;}
+
+.seq-step{border-bottom:1px solid var(--faint);padding:10px 12px;}
+.seq-step:last-child{border-bottom:none;}
+.seq-step.child{background:rgba(79,110,247,.03);padding-left:24px;border-left:2px solid var(--border2);}
+.step-top{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+.step-pal{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;font-size:0.7rem;font-weight:700;flex-shrink:0;}
+.p1{background:rgba(34,197,94,.15);color:#22c55e;}
+.p2{background:rgba(132,204,22,.15);color:#84cc16;}
+.p3{background:rgba(234,179,8,.15);color:#eab308;}
+.p4{background:rgba(249,115,22,.15);color:#f97316;}
+.p5{background:rgba(239,68,68,.15);color:#ef4444;}
+.p6{background:rgba(167,139,250,.15);color:#a78bfa;}
+.step-match{font-size:0.82rem;font-weight:600;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.step-prono{font-size:0.92rem;font-weight:700;color:var(--accent2);margin:2px 0 4px;line-height:1.3;}
+.step-meta{font-size:0.65rem;color:var(--muted);margin-bottom:6px;}
+.step-nums{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+.step-cote{font-size:0.78rem;font-weight:600;color:var(--accent2);}
+.step-mise{font-size:0.78rem;color:var(--text);}
+.step-gain{font-size:0.8rem;font-weight:700;}
+.step-gain.pos{color:var(--win);}
+.step-gain.neg{color:var(--loss);}
+.step-actions{display:flex;gap:5px;flex-wrap:wrap;}
+.status-badge{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:20px;font-size:0.67rem;font-weight:600;}
+.s-win{background:rgba(34,197,94,.15);color:var(--win);}
+.s-loss{background:rgba(239,68,68,.15);color:var(--loss);}
+.s-cashout{background:rgba(245,158,11,.15);color:var(--cashout);}
+.s-pending{background:rgba(100,116,139,.15);color:var(--pending);}
+
+.empty{text-align:center;padding:48px 20px;color:var(--muted);}
+.empty-icon{font-size:2.5rem;margin-bottom:8px;}
+
+/* ── STATS PAGE ── */
+.stat-bar-wrap{display:flex;flex-direction:column;gap:10px;}
+.stat-bar-row{display:flex;align-items:center;gap:8px;}
+.stat-bar-label{font-size:0.72rem;color:var(--text);width:80px;flex-shrink:0;}
+.stat-bar-track{flex:1;height:10px;background:var(--faint);border-radius:5px;overflow:hidden;}
+.stat-bar-fill{height:100%;border-radius:5px;}
+.stat-bar-pct{font-size:0.68rem;font-weight:700;width:36px;text-align:right;}
+.stat-bar-count{font-size:0.62rem;color:var(--muted);width:32px;text-align:right;}
+.donut-row{display:flex;flex-direction:column;align-items:center;gap:14px;}
+.donut-legend{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%;}
+.dl-item{display:flex;align-items:center;gap:7px;font-size:0.75rem;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 10px;}
+.dl-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.dl-label{color:var(--muted);}
+.dl-val{font-weight:700;margin-left:auto;}
+.chart-tabs{display:flex;gap:4px;overflow-x:auto;}
+.chart-tabs::-webkit-scrollbar{display:none;}
+.ctab{padding:4px 12px;border-radius:6px;font-size:0.7rem;cursor:pointer;background:var(--surface);border:1px solid var(--border);color:var(--muted);white-space:nowrap;transition:all .2s;flex-shrink:0;}
+.ctab.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+.palier-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.pal-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px;}
+.pal-num{font-size:0.6rem;color:var(--muted);margin-bottom:2px;}
+.pal-mise{font-size:0.92rem;font-weight:700;}
+.pal-cumul{font-size:0.6rem;color:var(--muted);margin-top:2px;}
+.streak-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+.streak-card{background:var(--surface);border-radius:8px;padding:10px;text-align:center;}
+.streak-val{font-size:1.35rem;font-weight:700;}
+.streak-lbl{font-size:0.58rem;color:var(--muted);text-transform:uppercase;margin-top:2px;}
+
+/* ── MODAL (bottom sheet on mobile) ── */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:500;display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s;}
+.modal-bg.open{opacity:1;pointer-events:all;}
+.modal{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:20px 20px 0 0;
+  padding:20px 20px calc(20px + var(--safe-bot));
+  width:100%;max-width:480px;
+  max-height:85vh;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  transform:translateY(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);
+}
+.modal-bg.open .modal{transform:translateY(0);}
+.modal-handle{width:36px;height:4px;background:var(--border2);border-radius:2px;margin:0 auto 16px;}
+.modal-title{font-size:0.95rem;font-weight:700;margin-bottom:3px;}
+.modal-sub{font-size:0.75rem;color:var(--muted);margin-bottom:16px;}
+.modal-actions{display:flex;gap:8px;margin-top:14px;}
+.btn-cancel{background:var(--surface);color:var(--muted);border:1px solid var(--border);padding:11px 16px;border-radius:10px;cursor:pointer;font-size:0.88rem;font-weight:600;}
+.result-picker{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;}
+.rpick{padding:14px 8px;border-radius:10px;border:2px solid var(--border);cursor:pointer;text-align:center;font-size:0.85rem;font-weight:600;transition:all .2s;background:var(--surface);}
+.rpick.r-win{border-color:rgba(34,197,94,.4);color:var(--win);}
+.rpick.r-loss{border-color:rgba(239,68,68,.4);color:var(--loss);}
+.rpick.r-cash{border-color:rgba(245,158,11,.4);color:var(--cashout);}
+.rpick.r-pending{border-color:rgba(100,116,139,.4);color:var(--pending);}
+.rpick.selected{background:rgba(79,110,247,.2);border-color:var(--accent);}
+.cashout-wrap{display:none;}
+.cashout-wrap.show{display:block;margin-bottom:10px;}
+
+/* ── TOAST ── */
+.toast{
+  position:fixed;bottom:calc(var(--nav-h) + var(--safe-bot) + 12px);left:50%;transform:translateX(-50%) translateY(20px);
+  z-index:999;background:var(--card);border:1px solid var(--border);border-left:3px solid var(--accent);
+  border-radius:10px;padding:10px 16px;font-size:0.82rem;color:var(--text);
+  box-shadow:0 8px 32px rgba(0,0,0,.5);opacity:0;transition:all .3s;white-space:nowrap;
+}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
+
+/* ── ADD FORM PAGE ── */
+.form-page{padding-bottom:20px;}
+.combo-row{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 10px 4px;margin-bottom:10px;}
+.combo-row-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;font-size:0.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;}
+.combo-row-del{background:none;border:none;color:var(--loss);font-size:0.9rem;cursor:pointer;padding:2px 6px;}
+.combo-total-row{display:flex;justify-content:space-between;align-items:center;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:0.85rem;font-weight:700;font-variant-numeric:tabular-nums;}
+.combo-badge{background:rgba(79,110,247,.18);color:var(--accent);font-size:0.62rem;font-weight:700;padding:2px 6px;border-radius:5px;flex-shrink:0;}
+.combo-list{margin:4px 0 2px;padding-left:8px;border-left:2px solid var(--border2);display:flex;flex-direction:column;gap:2px;}
+.combo-item{display:flex;justify-content:space-between;font-size:0.7rem;color:var(--muted);gap:8px;}
+.combo-item span:last-child{color:var(--text);font-variant-numeric:tabular-nums;flex-shrink:0;}
+.step-note{font-size:0.7rem;color:var(--muted);font-style:italic;margin:-2px 0 6px;}
+.goal-bar-wrap{background:var(--surface);border:1px solid var(--border);border-radius:999px;height:14px;overflow:hidden;margin-bottom:8px;}
+.goal-bar-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--win));border-radius:999px;transition:width .4s ease;}
+.goal-bar-labels{display:flex;justify-content:space-between;font-size:0.72rem;color:var(--muted);font-variant-numeric:tabular-nums;}
+.recap-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid var(--faint);}
+.recap-row:last-child{border-bottom:none;}
+.recap-month{font-size:0.8rem;font-weight:700;min-width:78px;text-transform:capitalize;}
+.recap-mid{flex:1;font-size:0.68rem;color:var(--muted);text-align:center;}
+.recap-gain{font-size:0.82rem;font-weight:700;font-variant-numeric:tabular-nums;text-align:right;min-width:70px;}
+.edit-details-toggle{font-size:0.75rem;color:var(--accent);font-weight:600;cursor:pointer;margin-bottom:12px;display:inline-block;}
+
+/* ── CALENDRIER ── */
+.cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.cal-month{font-size:0.95rem;font-weight:700;color:var(--text);}
+.cal-arrow{background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1.1rem;}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:14px;}
+.cal-dh{font-size:0.6rem;color:var(--muted);text-align:center;padding:3px 0;font-weight:600;text-transform:uppercase;}
+.cal-day{
+  border-radius:8px;min-height:38px;padding:3px;cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;gap:2px;
+  border:1px solid transparent;transition:border-color .15s;
+  position:relative;
+}
+.cal-day:hover{border-color:var(--border2);}
+.cal-day.today{border-color:var(--accent);}
+.cal-day.empty{opacity:0;}
+.cal-day.selected{background:rgba(79,110,247,.15);border-color:var(--accent);}
+.cal-day-num{font-size:0.72rem;font-weight:600;color:var(--muted);}
+.cal-day.has-bets .cal-day-num{color:var(--text);}
+.cal-dots{display:flex;gap:2px;flex-wrap:wrap;justify-content:center;}
+.cal-dot{width:5px;height:5px;border-radius:50%;}
+.cal-day-gain{font-size:0.55rem;font-weight:700;}
+.cal-day-list{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:12px;}
+.cal-day-list-title{font-size:0.75rem;font-weight:700;color:var(--text);margin-bottom:10px;}
+.cal-bet-row{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--faint);}
+.cal-bet-row:last-child{border-bottom:none;}
+.cal-bet-sport{font-size:0.65rem;color:var(--muted);width:56px;flex-shrink:0;}
+.cal-bet-match{font-size:0.78rem;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.cal-bet-gain{font-size:0.78rem;font-weight:700;white-space:nowrap;}
+.cal-week-bar{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:12px;}
+.cal-week-title{font-size:0.72rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:10px;}
+
+/* ── ALERTES / ANALYSES ── */
+.alert-card{border-radius:10px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:flex-start;gap:10px;}
+.alert-card.danger{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);}
+.alert-card.warning{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);}
+.alert-card.info{background:rgba(79,110,247,.1);border:1px solid rgba(79,110,247,.3);}
+.alert-card.success{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);}
+.alert-icon{font-size:1.2rem;flex-shrink:0;margin-top:1px;}
+.alert-body{}
+.alert-title{font-size:0.8rem;font-weight:700;margin-bottom:2px;}
+.alert-card.danger .alert-title{color:var(--loss);}
+.alert-card.warning .alert-title{color:var(--cashout);}
+.alert-card.info .alert-title{color:var(--accent2);}
+.alert-card.success .alert-title{color:var(--win);}
+.alert-desc{font-size:0.72rem;color:var(--muted);line-height:1.5;}
+.analyse-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;}
+.analyse-cell{background:var(--surface);border-radius:8px;padding:10px 12px;}
+.analyse-label{font-size:0.62rem;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;}
+.analyse-value{font-size:1rem;font-weight:700;}
+.analyse-sub{font-size:0.62rem;color:var(--muted);margin-top:2px;}
+
+/* ── INSTALL BANNER ── */
+.install-banner{
+  background:linear-gradient(135deg,#1a2550,#1e2640);
+  border:1px solid var(--accent);border-radius:12px;
+  padding:12px 14px;margin-bottom:12px;
+  display:flex;align-items:center;gap:10px;
+}
+.install-banner-text{flex:1;font-size:0.78rem;color:var(--accent2);line-height:1.5;}
+.install-banner-text strong{color:#fff;display:block;margin-bottom:2px;}
+.install-close{color:var(--muted);font-size:1.1rem;cursor:pointer;flex-shrink:0;}
+
+.live-pill{display:flex;align-items:center;gap:5px;font-size:0.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--win);animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.35;}}
+.setup-card{background:var(--card);border:1px solid var(--border2);border-radius:var(--radius);padding:16px;margin-bottom:12px;}
+.setup-card label{display:block;font-size:0.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;}
+.setup-card input{width:100%;background:var(--surface);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-size:0.85rem;padding:10px 12px;outline:none;margin-bottom:10px;font-family:monospace;}
+.setup-card button{width:100%;padding:12px;border:none;border-radius:10px;background:var(--accent);color:#fff;font-size:0.9rem;font-weight:700;cursor:pointer;}
+.setup-hint{font-size:0.68rem;color:var(--muted);margin-top:10px;line-height:1.4;}
+#appZone{display:none;flex-direction:column;flex:1;min-height:0;}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<!-- TOPBAR -->
+<header class="topbar">
+  <div class="logo">🎯 <span>Pronos</span></div>
+  <div class="bk-pill">
+    <span class="bk-label">BK</span>
+    <span class="bk-value" id="topBK">0,00 €</span>
+    <span class="bk-delta pos" id="topDelta">+0,00 €</span>
+  </div>
+  <div class="live-pill"><span class="live-dot" id="liveDot"></span><span id="liveLabel">connexion…</span></div>
+</header>
+
+<div id="setupZone" style="display:none;">
+  <div class="setup-card">
+    <label>Adresse de la base (fournie par le propriétaire)</label>
+    <input type="text" id="dbUrlInput" placeholder="https://xxxx-default-rtdb.firebasedatabase.app">
+    <button onclick="connectManual()">Se connecter au suivi</button>
+    <div class="setup-hint">Ce lien t'a été envoyé par la personne qui gère la martingale. Colle-le ici une seule fois — ton navigateur s'en souviendra.</div>
+  </div>
+</div>
+
+<div id="appZone" style="display:none;">
+
+<!-- PAGES -->
+<div class="pages">
+
+  <!-- ══ PAGE SUIVI ══ -->
+  <div class="page active" id="page-suivi">
+    <div id="installBanner" class="install-banner" style="display:none;">
+      <div class="install-banner-text">
+        <strong>📲 Ajouter à l'écran d'accueil</strong>
+        Safari → bouton Partage → "Sur l'écran d'accueil"
+      </div>
+      <div class="install-close" onclick="document.getElementById('installBanner').style.display='none'">✕</div>
+    </div>
+
+    <!-- Filtres séquences -->
+    <div class="seq-filter-row">
+      <div class="sfchip active" onclick="setSeqFilter('',this)">Toutes</div>
+      <div class="sfchip" onclick="setSeqFilter('open',this)">En cours</div>
+      <div class="sfchip" onclick="setSeqFilter('won',this)">Gagnées ✅</div>
+      <div class="sfchip" onclick="setSeqFilter('lost',this)">Perdues ❌</div>
+    </div>
+
+    <!-- Paliers -->
+    <div class="card" id="palierGridCard">
+      <div class="card-title">Paliers (BK actuelle)</div>
+      <div class="palier-grid" id="palierGrid"></div>
+      <div class="seq-hint" id="palierNextThreshold" style="margin-top:10px;"></div>
+    </div>
+
+    <div id="seqTree">
+      <div class="empty"><div class="empty-icon">🎲</div>Aucune séquence pour le moment.</div>
+    </div>
+  </div>
+
+  <!-- ══ PAGE STATS ══ -->
+  <div class="page" id="page-stats">
+
+    <!-- KPIs scrollables -->
+    <div class="kpi-scroll">
+      <div class="kpi win">
+        <div class="kpi-label">Bénéfice</div>
+        <div class="kpi-value" id="sKBenef">0,00 €</div>
+        <div class="kpi-sub" id="sKBenefPct">0 %</div>
+      </div>
+      <div class="kpi gold">
+        <div class="kpi-label">ROI</div>
+        <div class="kpi-value" id="sKROI">—</div>
+        <div class="kpi-sub" id="sKMise">0 € misés</div>
+      </div>
+      <div class="kpi blue">
+        <div class="kpi-label">Réussite</div>
+        <div class="kpi-value" id="sKWin">—</div>
+        <div class="kpi-sub" id="sKWinCount">0 / 0</div>
+      </div>
+      <div class="kpi pur">
+        <div class="kpi-label">Cote moy.</div>
+        <div class="kpi-value" id="sKCote">—</div>
+        <div class="kpi-sub" id="sKNb">0 paris</div>
+      </div>
+      <div class="kpi gold">
+        <div class="kpi-label" id="sKSeqLabel">Séquences</div>
+        <div class="kpi-value" id="sKSeq">0</div>
+        <div class="kpi-sub" id="sKSeqSub">—</div>
+      </div>
+      <div class="kpi red">
+        <div class="kpi-label">Drawdown max</div>
+        <div class="kpi-value" id="sKDrawdown">—</div>
+        <div class="kpi-sub" id="sKDrawdownPct">—</div>
+      </div>
+    </div>
+
+    <!-- Objectif de bankroll -->
+    <div class="card" id="bkGoalCard" style="display:none;">
+      <div class="card-title">🎯 Objectif de bankroll</div>
+      <div class="goal-bar-wrap"><div class="goal-bar-fill" id="goalBarFill" style="width:0%;"></div></div>
+      <div class="goal-bar-labels">
+        <span id="goalCurrentLabel">0 €</span>
+        <span id="goalPctLabel">0 %</span>
+        <span id="goalTargetLabel">0 €</span>
+      </div>
+    </div>
+
+    <!-- Participants (martingale participative) -->
+    <div class="card" id="participantsCard" style="display:none;">
+      <div class="card-title">👥 Répartition participants</div>
+      <div class="part-summary" id="participantsSummary"></div>
+      <div id="participantsTable"></div>
+    </div>
+
+    <!-- Chart BK -->
+    <div class="card">
+      <div class="card-title">
+        Évolution
+        <div class="chart-tabs">
+          <div class="ctab active" onclick="switchTab('bk',this)">BK</div>
+          <div class="ctab" onclick="switchTab('gain',this)">Gains</div>
+          <div class="ctab" onclick="switchTab('cumul',this)">Cumulatif</div>
+          <div class="ctab" onclick="switchTab('drawdown',this)">Drawdown</div>
+        </div>
+      </div>
+      <canvas id="mainChart" height="130"></canvas>
+    </div>
+
+    <!-- Résultats -->
+    <div class="card">
+      <div class="card-title">Résultats</div>
+      <div class="donut-row">
+        <canvas id="pieChart" width="150" height="150" style="flex-shrink:0;"></canvas>
+        <div class="donut-legend" id="donutLegend"></div>
+      </div>
+    </div>
+
+    <!-- Sports -->
+    <div class="card">
+      <div class="card-title">Par sport</div>
+      <div class="stat-bar-wrap" id="sportBars"></div>
+    </div>
+
+    <!-- Bookmakers -->
+    <div class="card" id="bookmakerCard" style="display:none;">
+      <div class="card-title">Par bookmaker</div>
+      <div class="stat-bar-wrap" id="bookmakerBars"></div>
+    </div>
+
+    <!-- Récap mensuel -->
+    <div class="card">
+      <div class="card-title">📅 Récap mensuel</div>
+      <div id="monthlyRecap"></div>
+    </div>
+
+    <!-- Séries -->
+    <div class="card">
+      <div class="card-title">Séries</div>
+      <div class="streak-grid" id="streakGrid"></div>
+    </div>
+
+    <!-- Alertes & Analyses -->
+    <div class="card">
+      <div class="card-title">⚠️ Alertes & Analyses</div>
+      <div id="alertsPanel"></div>
+    </div>
+
+    <!-- Analyse par cote -->
+    <div class="card">
+      <div class="card-title">🎯 Analyse par tranche de cote</div>
+      <div id="coteAnalyse"></div>
+    </div>
+  </div>
+
+  <!-- ══ PAGE CALENDRIER ══ -->
+  <div class="page" id="page-cal">
+    <div class="cal-nav">
+      <div class="cal-arrow" onclick="calPrev()">‹</div>
+      <div class="cal-month" id="calMonthLabel"></div>
+      <div class="cal-arrow" onclick="calNext()">›</div>
+    </div>
+
+    <!-- Résumé semaine -->
+    <div class="cal-week-bar" id="calWeekBar"></div>
+
+    <!-- Grille calendrier -->
+    <div class="cal-grid" id="calGrid"></div>
+
+    <!-- Détail du jour sélectionné -->
+    <div id="calDayDetail"></div>
+  </div>
+
+</div><!-- /pages -->
+
+<!-- BOTTOM NAV -->
+<nav class="bottom-nav">
+  <button class="bnav-item active" id="bnav-suivi" onclick="goPage('suivi',this)">
+    <div class="bnav-icon">📋</div>
+    <div class="bnav-label">Suivi</div>
+  </button>
+  <button class="bnav-item" id="bnav-cal" onclick="goPage('cal',this)">
+    <div class="bnav-icon">📅</div>
+    <div class="bnav-label">Calendrier</div>
+  </button>
+  <button class="bnav-item" id="bnav-stats" onclick="goPage('stats',this)">
+    <div class="bnav-icon">📊</div>
+    <div class="bnav-label">Stats</div>
+  </button>
+</nav>
+
+</div><!-- /appZone -->
+</div><!-- /shell -->
 <script>
 "use strict";
-let state=null, dbUrl=null, chartInstance=null, pieInstance=null, filter='';
-let pollTimer=null;
+let state={bkStart:35,multiplier:4,nbPaliers:6,bkMode:'martingale',bkGoal:0,dailyLossLimit:0,sequences:[],participants:[]};
+let dbUrl=null, pollTimer=null;
+let chartInstance=null, pieInstance=null, chartMode='bk';
+let seqFilter='';
+let calYear=new Date().getFullYear(), calMonth=new Date().getMonth();
+let calSelectedDay=null;
 
 function qs(name){ return new URLSearchParams(location.search).get(name); }
 
-function init(){
+function initViewer(){
   dbUrl = qs('db') || localStorage.getItem('viewerDbUrl') || '';
   if(dbUrl){
     localStorage.setItem('viewerDbUrl', dbUrl);
-    document.getElementById('app').style.display='';
+    document.getElementById('appZone').style.display='flex';
     fetchState(true);
     pollTimer=setInterval(()=>fetchState(false), 8000);
   }else{
@@ -213,14 +623,14 @@ function init(){
 }
 function connectManual(){
   const v=document.getElementById('dbUrlInput').value.trim();
-  if(!v){return;}
+  if(!v)return;
   dbUrl=v;
   localStorage.setItem('viewerDbUrl', v);
   const url=new URL(location.href);
   url.searchParams.set('db', v);
   history.replaceState(null,'',url.toString());
   document.getElementById('setupZone').style.display='none';
-  document.getElementById('app').style.display='';
+  document.getElementById('appZone').style.display='flex';
   fetchState(true);
   pollTimer=setInterval(()=>fetchState(false), 8000);
 }
@@ -234,7 +644,9 @@ async function fetchState(showErr){
     if(!r.ok)throw new Error('HTTP '+r.status);
     const data=await r.json();
     if(!data){ setLive('empty'); return; }
-    state=data;
+    state={bkStart:35,multiplier:4,nbPaliers:6,bkMode:'martingale',bkGoal:0,dailyLossLimit:0,sequences:[],participants:[],...data};
+    recomputeBK();
+    applyBkModeUI();
     render();
     setLive('ok');
   }catch(e){
@@ -244,22 +656,43 @@ async function fetchState(showErr){
 }
 function setLive(s){
   const dot=document.getElementById('liveDot'), label=document.getElementById('liveLabel');
+  if(!dot)return;
   if(s==='ok'){dot.style.background='var(--win)';label.textContent='en direct';}
   else if(s==='syncing'){dot.style.background='var(--cashout)';label.textContent='synchro…';}
   else if(s==='error'){dot.style.background='var(--loss)';label.textContent='connexion impossible';}
   else if(s==='empty'){dot.style.background='var(--muted)';label.textContent='aucune donnée';}
-  const lu=document.getElementById('lastUpdate');
-  if(lu && s==='ok') lu.textContent='Dernière mise à jour : '+new Date().toLocaleTimeString('fr-FR');
 }
 
-// ── same math as the main app ──
 function getMiseP1(bk){const r=state.multiplier,n=state.nbPaliers;return Math.floor(bk*(r-1)/(Math.pow(r,n)-1)*100)/100;}
-function allBets(){return (state.sequences||[]).flatMap(s=>s.bets);}
-function currentBK(){
-  const flat=allBets().filter(b=>b.status!=='En cours').sort((a,b)=>a.id-b.id);
+function getMises(bk){const p1=getMiseP1(bk),m=[];for(let i=0;i<state.nbPaliers;i++)m.push(Math.floor(p1*Math.pow(state.multiplier,i)*100)/100);return m;}
+function getCumuls(bk){const mises=getMises(bk),c=[];let cum=0;for(const m of mises){cum=Math.round((cum+m)*100)/100;c.push(cum);}return c;}
+function computeGain(mise,cote,status,cashoutGain){
+  if(status==='Gagné')return Math.round((cote-1)*mise*100)/100;
+  if(status==='Perdu')return Math.round(-mise*100)/100;
+  if(status==='Cashout')return Math.round(((cashoutGain??0)-mise)*100)/100;
+  return 0;
+}
+function allBets(){return state.sequences.flatMap(s=>s.bets);}
+function recomputeBK(){
   let bk=state.bkStart;
-  for(const b of flat) bk=Math.round((bk+b.gain)*100)/100;
-  return bk;
+  const flat=allBets().sort((a,b)=>a.id-b.id);
+  for(const b of flat){
+    b.gain=computeGain(b.mise,b.cote,b.status,b.cashoutGain);
+    if(b.status!=='En cours')bk=Math.round((bk+b.gain)*100)/100;
+    b.bkAfter=bk;
+  }
+  for(const seq of state.sequences){
+    seq.bets.sort((a,b)=>a.id-b.id);
+    for(const b of seq.bets){const f=flat.find(x=>x.id===b.id);if(f){b.gain=f.gain;b.bkAfter=f.bkAfter;}}
+  }
+}
+function currentBK(){const flat=allBets().filter(b=>b.status!=='En cours').sort((a,b)=>b.id-a.id);return flat.length>0?flat[0].bkAfter:state.bkStart;}
+function nextPalierForSeq(seq){
+  if(!seq||seq.bets.length===0)return 1;
+  const last=[...seq.bets].sort((a,b)=>b.id-a.id)[0];
+  if(last.status==='Perdu')return Math.min(last.palier+1,state.nbPaliers);
+  if(last.status==='En cours')return last.palier;
+  return 1;
 }
 function seqStatus(seq){
   if(seq.bets.length===0)return 'open';
@@ -269,6 +702,22 @@ function seqStatus(seq){
   if(maxP>=state.nbPaliers&&seq.bets.find(b=>b.palier===state.nbPaliers)?.status==='Perdu')return 'lost';
   return 'open';
 }
+
+// ═══════════════════════════
+//  ADD BET
+// ═══════════════════════════
+
+function setSeqFilter(f,el){
+  seqFilter=f;
+  document.querySelectorAll('.sfchip').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');
+  renderSequences();
+}
+
+// ═══════════════════════════
+//  STATS
+// ═══════════════════════════
+
 function computeStats(){
   const flat=allBets();
   const resolved=flat.filter(b=>b.status!=='En cours');
@@ -282,93 +731,127 @@ function computeStats(){
   const benef=Math.round((bk-state.bkStart)*100)/100;
   const roi=totalMise>0?totalGain/totalMise*100:0;
   const winRate=resolved.length>0?won.length/resolved.length*100:0;
-  return{bk,benef,roi,winRate,total:resolved.length,won:won.length,lost:lost.length,cash:cash.length,pending:pending.length};
+  const coteMoy=resolved.length>0?resolved.reduce((s,b)=>s+b.cote,0)/resolved.length:0;
+  let maxWin=0,maxLoss=0,curW=0,curL=0;
+  for(const b of resolved){if(b.status==='Gagné'){curW++;curL=0;if(curW>maxWin)maxWin=curW;}else if(b.status==='Perdu'){curL++;curW=0;if(curL>maxLoss)maxLoss=curL;}else{curW=0;curL=0;}}
+  let streak=0,streakType=null;
+  for(const b of [...resolved].sort((a,b)=>b.id-a.id)){
+    if(b.status==='Gagné'){if(streakType===null||streakType==='win'){streakType='win';streak++;}else break;}
+    else if(b.status==='Perdu'){if(streakType===null||streakType==='loss'){streakType='loss';streak++;}else break;}
+    else break;
+  }
+  const sportMap={};
+  for(const b of resolved){if(!sportMap[b.sport])sportMap[b.sport]={won:0,total:0};sportMap[b.sport].total++;if(b.status==='Gagné')sportMap[b.sport].won++;}
+  const bookmakerMap={};
+  for(const b of resolved){if(!b.bookmaker)continue;if(!bookmakerMap[b.bookmaker])bookmakerMap[b.bookmaker]={won:0,total:0};bookmakerMap[b.bookmaker].total++;if(b.status==='Gagné')bookmakerMap[b.bookmaker].won++;}
+  const seqs=state.sequences;
+  const seqWon=seqs.filter(s=>seqStatus(s)==='won').length;
+  const seqLost=seqs.filter(s=>seqStatus(s)==='lost').length;
+  const seqOpen=seqs.filter(s=>seqStatus(s)==='open').length;
+
+  // Drawdown: walk resolved bets chronologically, track distance from running peak BK
+  let peak=state.bkStart,maxDD=0,maxDDPct=0;
+  for(const b of [...resolved].sort((a,x)=>a.id-x.id)){
+    if(b.bkAfter>peak)peak=b.bkAfter;
+    const dd=peak-b.bkAfter;
+    if(dd>maxDD){maxDD=dd;maxDDPct=peak>0?dd/peak*100:0;}
+  }
+
+  // Monthly recap (grouped by real bet timestamp, not the display date string)
+  const monthMap={};
+  for(const b of resolved){
+    const d=new Date(b.id);
+    const key=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+    if(!monthMap[key])monthMap[key]={key,year:d.getFullYear(),month:d.getMonth(),total:0,won:0,gain:0,mise:0};
+    monthMap[key].total++;
+    if(b.status==='Gagné')monthMap[key].won++;
+    monthMap[key].gain+=b.gain;
+    monthMap[key].mise+=b.mise;
+  }
+  const monthly=Object.values(monthMap).sort((a,x)=>x.key.localeCompare(a.key));
+
+  return{bk,benef,roi,winRate,totalMise,coteMoy,won:won.length,lost:lost.length,cash:cash.length,pending:pending.length,total:resolved.length,maxWin,maxLoss,streak,streakType,sportMap,bookmakerMap,seqs,seqWon,seqLost,seqOpen,maxDD,maxDDPct,monthly};
 }
 
-function fmt(v){return v.toFixed(2).replace('.',',')+' €';}
+// ═══════════════════════════
+//  RENDER
+// ═══════════════════════════
 
 function render(){
-  const s=computeStats();
+  const stats=computeStats();
+  renderTopbar(stats);
+  renderSequences();
+  renderStatsPage(stats);
+  renderCalendar();
+}
+
+function renderTopbar(s){
   document.getElementById('topBK').textContent=fmt(s.bk);
   const d=document.getElementById('topDelta');
-  d.textContent=(s.benef>=0?'+':'')+fmt(s.benef)+' depuis le départ';
-  d.className='hero-delta '+(s.benef>=0?'pos':'neg');
-
-  document.getElementById('kpiScroll').innerHTML=`
-    <div class="kpi"><div class="kpi-label">ROI</div><div class="kpi-value">${s.roi.toFixed(1)} %</div></div>
-    <div class="kpi"><div class="kpi-label">Réussite</div><div class="kpi-value">${s.total>0?s.winRate.toFixed(1)+' %':'—'}</div></div>
-    <div class="kpi"><div class="kpi-label">Paris résolus</div><div class="kpi-value">${s.total}</div></div>
-    <div class="kpi"><div class="kpi-label">En cours</div><div class="kpi-value">${s.pending}</div></div>`;
-
-  renderParticipants(s);
-  renderChart();
-  renderDonut(s);
-  renderSequences();
+  d.textContent=(s.benef>=0?'+':'')+fmt(s.benef);
+  d.className='bk-delta '+(s.benef>=0?'pos':'neg');
 }
 
-function renderParticipants(s){
-  const card=document.getElementById('participantsCard');
-  const participants=state.participants||[];
-  if(participants.length===0){ card.style.display='none'; return; }
-  card.style.display='';
-  const totalInvested=Math.round(participants.reduce((sum,p)=>sum+p.amount,0)*100)/100;
-  document.getElementById('participantsSummary').innerHTML=
-    `Total investi : <b>${totalInvested.toFixed(2)} €</b> · BK actuelle : <b>${s.bk.toFixed(2)} €</b>`;
-  document.getElementById('participantsTable').innerHTML=participants.map(p=>{
-    const pct=totalInvested>0?p.amount/totalInvested:0;
-    const current=Math.round(s.bk*pct*100)/100;
-    const gain=Math.round((current-p.amount)*100)/100;
-    const gainPct=p.amount>0?gain/p.amount*100:0;
-    return `<div class="part-row">
-      <div class="part-row-top"><span class="part-name">${p.name}</span><span class="part-pct">${(pct*100).toFixed(1)}%</span></div>
-      <div class="part-amounts"><span class="part-invested">${p.amount.toFixed(2)} € investi</span><span class="part-arrow">→</span><span class="part-current">${current.toFixed(2)} €</span></div>
-      <div class="part-gain ${gain>=0?'pos':'neg'}">${gain>=0?'+':''}${gain.toFixed(2)} € (${gain>=0?'+':''}${gainPct.toFixed(1)} %)</div>
+
+const seqSMap={
+  'Gagné':'<span class="status-badge s-win">✅ Gagné</span>',
+  'Perdu':'<span class="status-badge s-loss">❌ Perdu</span>',
+  'Cashout':'<span class="status-badge s-cashout">💸 Cashout</span>',
+  'En cours':'<span class="status-badge s-pending">⏳ En cours</span>',
+};
+const seqPalC=['p1','p2','p3','p4','p5','p6'];
+function betStepInner(b,showPalier){
+  const gainStr=b.status==='En cours'?'—':(b.gain>=0?'+':'')+b.gain.toFixed(2)+' €';
+  const gainCls=b.gain>=0?'pos':'neg';
+  const comboBadge=b.type==='combine'?'<span class="combo-badge">🔗 Combiné</span>':'';
+  const comboDetail=(b.type==='combine'&&Array.isArray(b.combo))?`<div class="combo-list">${b.combo.map(c=>`<div class="combo-item"><span>${c.match}</span><span>@${(c.cote||0).toFixed(2)}</span></div>`).join('')}</div>`:'';
+  const palBadge=showPalier?`<span class="step-pal ${seqPalC[(b.palier-1)%seqPalC.length]}">${b.palier}</span>`:'';
+  return `<div class="step-top">
+      ${palBadge}
+      ${comboBadge}
+      <span class="step-match" title="${b.match}">${b.match}</span>
+      ${seqSMap[b.status]||b.status}
+    </div>
+    ${b.prono?`<div class="step-prono">🎯 ${b.prono}</div>`:''}
+    <div class="step-meta">${b.sport} · ${b.date}${b.bookmaker?' · 🏦 '+b.bookmaker:''}</div>
+    ${comboDetail}
+    ${b.note?`<div class="step-note">📝 ${b.note}</div>`:''}
+    <div class="step-nums">
+      <span class="step-cote">Cote ${b.type==='combine'?b.cote.toFixed(3):b.cote.toFixed(2)}</span>
+      <span class="step-mise">Mise ${b.mise.toFixed(2)} €</span>
+      <span class="step-gain ${gainCls}">${gainStr}</span>
     </div>`;
-  }).join('');
-}
-
-function renderChart(){
-  const flat=allBets().filter(b=>b.status!=='En cours').sort((a,b)=>a.id-b.id);
-  if(chartInstance){chartInstance.destroy();chartInstance=null;}
-  if(flat.length===0)return;
-  const G='#1e2640',T='#64748b';
-  const ctx=document.getElementById('mainChart').getContext('2d');
-  chartInstance=new Chart(ctx,{type:'line',data:{labels:flat.map((_,i)=>'#'+(i+1)),datasets:[{label:'BK',data:flat.map(b=>b.bkAfter),borderColor:'#4f6ef7',backgroundColor:'rgba(79,110,247,0.08)',fill:true,tension:0.35,pointRadius:2,pointBackgroundColor:flat.map(b=>b.status==='Gagné'?'#22c55e':b.status==='Perdu'?'#ef4444':'#f59e0b'),pointBorderColor:'#141926',pointBorderWidth:1}]},options:{plugins:{legend:{display:false}},scales:{x:{ticks:{color:T,font:{size:9}},grid:{color:G},maxTicksLimit:15},y:{ticks:{color:T,font:{size:9},callback:v=>v+'€'},grid:{color:G}}}}});
-}
-function renderDonut(s){
-  if(pieInstance){pieInstance.destroy();pieInstance=null;}
-  const data=[s.won,s.lost,s.cash,s.pending];
-  const labels=['Gagnés','Perdus','Cashout','En cours'];
-  const colors=['#22c55e','#ef4444','#f59e0b','#4b5563'];
-  pieInstance=new Chart(document.getElementById('pieChart').getContext('2d'),{type:'doughnut',data:{labels,datasets:[{data,backgroundColor:colors,borderWidth:0,hoverOffset:4}]},options:{cutout:'62%',plugins:{legend:{display:false}}}});
-  document.getElementById('donutLegend').innerHTML=labels.map((l,i)=>`<div class="dl-item"><div class="dl-dot" style="background:${colors[i]}"></div><span class="dl-label">${l}</span><span class="dl-val" style="color:${colors[i]}">${data[i]}</span></div>`).join('');
-}
-
-function setFilter(f,el){
-  filter=f;
-  document.querySelectorAll('.sfchip').forEach(c=>c.classList.remove('active'));
-  el.classList.add('active');
-  renderSequences();
 }
 function renderSequences(){
   const container=document.getElementById('seqTree');
-  const seqs=[...(state.sequences||[])].reverse();
-  const filtered=seqs.filter(seq=>{
-    const ss=seqStatus(seq);
-    if(!filter)return true;
-    return ss===filter;
-  });
-  if(filtered.length===0){
-    container.innerHTML='<div class="empty"><div class="empty-icon">🎲</div>Aucune séquence pour l\'instant.</div>';
+  if(state.bkMode==='standard'){
+    const filteredBets=[...allBets()].sort((a,b)=>b.id-a.id).filter(b=>{
+      if(!seqFilter)return true;
+      if(seqFilter==='open')return b.status==='En cours';
+      if(seqFilter==='won')return b.status==='Gagné'||b.status==='Cashout';
+      if(seqFilter==='lost')return b.status==='Perdu';
+      return true;
+    });
+    if(filteredBets.length===0){
+      container.innerHTML=`<div class="empty"><div class="empty-icon">🎲</div>Aucun pari pour le moment.</div>`;
+      return;
+    }
+    container.innerHTML=filteredBets.map(b=>`<div class="seq-block"><div class="seq-step">${betStepInner(b,false)}</div></div>`).join('');
     return;
   }
-  const palC=['p1','p2','p3','p4','p5','p6'];
-  const sMap={
-    'Gagné':'<span class="status-badge s-win">✅ Gagné</span>',
-    'Perdu':'<span class="status-badge s-loss">❌ Perdu</span>',
-    'Cashout':'<span class="status-badge s-cashout">💸 Cashout</span>',
-    'En cours':'<span class="status-badge s-pending">⏳ En cours</span>',
-  };
+  const seqs=[...state.sequences].reverse();
+  const filtered=seqs.filter(seq=>{
+    const ss=seqStatus(seq);
+    if(!seqFilter)return true;
+    if(seqFilter==='open')return ss==='open';
+    if(seqFilter==='won')return ss==='won';
+    if(seqFilter==='lost')return ss==='lost';
+    return true;
+  });
+  if(filtered.length===0){
+    container.innerHTML=`<div class="empty"><div class="empty-icon">🎲</div>Aucun pari pour le moment.</div>`;
+    return;
+  }
   container.innerHTML=filtered.map(seq=>{
     const ss=seqStatus(seq);
     const ssLabel=ss==='won'?'<span class="seq-badge ss-won">Gagnée ✅</span>':ss==='lost'?'<span class="seq-badge ss-lost">Perdue ❌</span>':'<span class="seq-badge ss-open">En cours ⏳</span>';
@@ -376,23 +859,9 @@ function renderSequences(){
     const seqGain=seq.bets.reduce((s,b)=>s+b.gain,0);
     const seqGainStr=seqGain>=0?`<span class="seq-gain" style="color:var(--win)">+${seqGain.toFixed(2)}€</span>`:`<span class="seq-gain" style="color:var(--loss)">${seqGain.toFixed(2)}€</span>`;
     const sortedBets=[...seq.bets].sort((a,b)=>a.id-b.id);
-    const stepsHtml=sortedBets.map(b=>{
-      const pc=palC[(b.palier-1)%palC.length];
-      const gainStr=b.status==='En cours'?'—':(b.gain>=0?'+':'')+b.gain.toFixed(2)+' €';
-      const gainCls=b.gain>=0?'pos':'neg';
-      return `<div class="seq-step">
-        <div class="step-top">
-          <span class="step-pal ${pc}">${b.palier}</span>
-          <span class="step-match" title="${b.match}">${b.match}</span>
-          ${sMap[b.status]||b.status}
-        </div>
-        <div class="step-meta">${b.sport} · ${b.date}${b.prono?' · '+b.prono.substring(0,28):''}</div>
-        <div class="step-nums">
-          <span class="step-cote">Cote ${b.cote.toFixed(2)}</span>
-          <span class="step-mise">Mise ${b.mise.toFixed(2)} €</span>
-          <span class="step-gain ${gainCls}">${gainStr}</span>
-        </div>
-      </div>`;
+    const stepsHtml=sortedBets.map((b,i)=>{
+      const isChild=i>0;
+      return `<div class="seq-step${isChild?' child':''}">${betStepInner(b,true)}</div>`;
     }).join('');
     return `<div class="seq-block">
       <div class="seq-block-header">
@@ -405,7 +874,469 @@ function renderSequences(){
   }).join('');
 }
 
-init();
+
+function renderStatsPage(s){
+  const bEl=document.getElementById('sKBenef');
+  bEl.textContent=(s.benef>=0?'+':'')+fmt(s.benef);
+  bEl.parentElement.className='kpi '+(s.benef>=0?'win':'red');
+  document.getElementById('sKBenefPct').textContent=(s.benef>=0?'+':'')+(state.bkStart>0?(s.benef/state.bkStart*100).toFixed(1):0)+' %';
+  document.getElementById('sKROI').textContent=s.roi.toFixed(1)+' %';
+  document.getElementById('sKMise').textContent=s.totalMise.toFixed(2)+' € misés';
+  document.getElementById('sKWin').textContent=s.total>0?s.winRate.toFixed(1)+' %':'—';
+  document.getElementById('sKWinCount').textContent=s.won+' / '+s.total;
+  document.getElementById('sKCote').textContent=s.coteMoy>0?s.coteMoy.toFixed(2):'—';
+  document.getElementById('sKNb').textContent=s.total+' résolus';
+  document.getElementById('sKSeq').textContent=s.seqs.length;
+  document.getElementById('sKSeqSub').textContent=s.seqWon+'✅ '+s.seqOpen+'⏳ '+s.seqLost+'❌';
+  document.getElementById('sKDrawdown').textContent=s.maxDD>0?'-'+s.maxDD.toFixed(2)+' €':'—';
+  document.getElementById('sKDrawdownPct').textContent=s.maxDD>0?'-'+s.maxDDPct.toFixed(1)+' % du pic':'aucun repli';
+
+  renderParticipants(s);
+  renderBkGoal(s);
+  renderMainChart(s);
+  renderDonut(s);
+  renderSportBars(s);
+  renderBookmakerBars(s);
+  renderMonthlyRecap(s);
+  renderStreaks(s);
+  renderAlerts();
+  renderPalierGrid();
+}
+
+function renderBkGoal(s){
+  const card=document.getElementById('bkGoalCard');
+  const goal=state.bkGoal||0;
+  if(goal<=0){card.style.display='none';return;}
+  card.style.display='';
+  const pct=Math.max(0,Math.min(100,s.bk/goal*100));
+  document.getElementById('goalBarFill').style.width=pct+'%';
+  document.getElementById('goalCurrentLabel').textContent=s.bk.toFixed(2)+' €';
+  document.getElementById('goalPctLabel').textContent=(s.bk/goal*100).toFixed(1)+' %';
+  document.getElementById('goalTargetLabel').textContent=goal.toFixed(2)+' €';
+}
+
+function renderBookmakerBars(s){
+  const card=document.getElementById('bookmakerCard');
+  const books=Object.entries(s.bookmakerMap).sort((a,b)=>b[1].total-a[1].total);
+  if(books.length===0){card.style.display='none';return;}
+  card.style.display='';
+  const max=books[0][1].total;
+  const C=['#22c55e','#84cc16','#eab308','#f59e0b','#ef4444'];
+  document.getElementById('bookmakerBars').innerHTML=books.map(([name,d])=>{
+    const pct=Math.round(d.won/d.total*100),bw=Math.round(d.total/max*100);
+    const c=pct>=65?C[0]:pct>=50?C[1]:pct>=40?C[2]:pct>=30?C[3]:C[4];
+    return `<div class="stat-bar-row"><div class="stat-bar-label">${name}</div><div class="stat-bar-track"><div class="stat-bar-fill" style="width:${bw}%;background:${c};opacity:.7;"></div></div><div class="stat-bar-pct" style="color:${c}">${pct}%</div><div class="stat-bar-count">${d.won}/${d.total}</div></div>`;
+  }).join('');
+}
+
+const MONTH_NAMES=['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+function renderMonthlyRecap(s){
+  const el=document.getElementById('monthlyRecap');
+  if(!s.monthly||s.monthly.length===0){
+    el.innerHTML='<div style="font-size:0.78rem;color:var(--muted);text-align:center;padding:16px;">Pas encore assez de données.</div>';
+    return;
+  }
+  el.innerHTML=s.monthly.map(m=>{
+    const winRate=m.total>0?Math.round(m.won/m.total*100):0;
+    const gainCls=m.gain>=0?'pos':'neg';
+    return `<div class="recap-row">
+      <span class="recap-month">${MONTH_NAMES[m.month]} ${m.year}</span>
+      <span class="recap-mid">${m.total} paris · ${winRate}% réussite</span>
+      <span class="recap-gain ${gainCls}" style="color:${m.gain>=0?'var(--win)':'var(--loss)'}">${m.gain>=0?'+':''}${m.gain.toFixed(2)} €</span>
+    </div>`;
+  }).join('');
+}
+
+function renderParticipants(s){
+  const card=document.getElementById('participantsCard');
+  const participants=state.participants||[];
+  if(participants.length===0){ card.style.display='none'; return; }
+  card.style.display='';
+  const totalInvested=Math.round(participants.reduce((sum,p)=>sum+p.amount,0)*100)/100;
+  const bk=s.bk;
+  document.getElementById('participantsSummary').innerHTML=
+    `Total investi : <b>${totalInvested.toFixed(2)} €</b> · BK actuelle : <b>${bk.toFixed(2)} €</b>`;
+  document.getElementById('participantsTable').innerHTML=participants.map(p=>{
+    const pct=totalInvested>0?p.amount/totalInvested:0;
+    const current=Math.round(bk*pct*100)/100;
+    const gain=Math.round((current-p.amount)*100)/100;
+    const gainPct=p.amount>0?gain/p.amount*100:0;
+    return `<div class="part-row">
+      <div class="part-row-top">
+        <span class="part-name">${p.name}</span>
+        <span class="part-pct">${(pct*100).toFixed(1)}%</span>
+      </div>
+      <div class="part-amounts">
+        <span class="part-invested">${p.amount.toFixed(2)} € investi</span>
+        <span class="part-arrow">→</span>
+        <span class="part-current">${current.toFixed(2)} €</span>
+      </div>
+      <div class="part-gain ${gain>=0?'pos':'neg'}">${gain>=0?'+':''}${gain.toFixed(2)} € (${gain>=0?'+':''}${gainPct.toFixed(1)} %)</div>
+    </div>`;
+  }).join('');
+}
+
+function renderMainChart(s){
+  const flat=allBets().filter(b=>b.status!=='En cours').sort((a,b)=>a.id-b.id);
+  if(chartInstance){chartInstance.destroy();chartInstance=null;}
+  if(flat.length===0)return;
+  const G='#1e2640',T='#64748b';
+  const labels=flat.map((_,i)=>'#'+(i+1));
+  const ctx=document.getElementById('mainChart').getContext('2d');
+  if(chartMode==='bk'){
+    chartInstance=new Chart(ctx,{type:'line',data:{labels,datasets:[{label:'BK',data:flat.map(b=>b.bkAfter),borderColor:'#4f6ef7',backgroundColor:'rgba(79,110,247,0.08)',fill:true,tension:0.35,pointRadius:2,pointBackgroundColor:flat.map(b=>b.status==='Gagné'?'#22c55e':b.status==='Perdu'?'#ef4444':'#f59e0b'),pointBorderColor:'#141926',pointBorderWidth:1}]},options:{plugins:{legend:{display:false}},scales:{x:{ticks:{color:T,font:{size:9}},grid:{color:G},maxTicksLimit:15},y:{ticks:{color:T,font:{size:9},callback:v=>v+'€'},grid:{color:G},min:0}}}});
+  }else if(chartMode==='gain'){
+    chartInstance=new Chart(ctx,{type:'bar',data:{labels,datasets:[{label:'Gain',data:flat.map(b=>b.gain),backgroundColor:flat.map(b=>b.gain>=0?'rgba(34,197,94,0.65)':'rgba(239,68,68,0.65)'),borderRadius:2}]},options:{plugins:{legend:{display:false}},scales:{x:{ticks:{color:T,font:{size:9}},grid:{color:G},maxTicksLimit:15},y:{ticks:{color:T,font:{size:9},callback:v=>v+'€'},grid:{color:G}}}}});
+  }else if(chartMode==='drawdown'){
+    let peak=state.bkStart;
+    const d=flat.map(b=>{if(b.bkAfter>peak)peak=b.bkAfter;return Math.round((b.bkAfter-peak)*100)/100;});
+    chartInstance=new Chart(ctx,{type:'line',data:{labels,datasets:[{label:'Drawdown',data:d,borderColor:'#ef4444',backgroundColor:'rgba(239,68,68,0.12)',fill:true,tension:0.25,pointRadius:2,pointBackgroundColor:'#ef4444'}]},options:{plugins:{legend:{display:false}},scales:{x:{ticks:{color:T,font:{size:9}},grid:{color:G},maxTicksLimit:15},y:{ticks:{color:T,font:{size:9},callback:v=>v+'€'},grid:{color:G},max:0}}}});
+  }else{
+    let cum=0;const d=flat.map(b=>{cum=Math.round((cum+b.gain)*100)/100;return cum;});
+    chartInstance=new Chart(ctx,{type:'line',data:{labels,datasets:[{label:'Cumulé',data:d,borderColor:'#f59e0b',backgroundColor:'rgba(245,158,11,0.07)',fill:true,tension:0.3,pointRadius:2,pointBackgroundColor:'#f59e0b'}]},options:{plugins:{legend:{display:false}},scales:{x:{ticks:{color:T,font:{size:9}},grid:{color:G},maxTicksLimit:15},y:{ticks:{color:T,font:{size:9},callback:v=>v+'€'},grid:{color:G}}}}});
+  }
+}
+function switchTab(mode,el){chartMode=mode;document.querySelectorAll('.ctab').forEach(t=>t.classList.remove('active'));el.classList.add('active');renderMainChart(computeStats());}
+
+function renderDonut(s){
+  if(pieInstance){pieInstance.destroy();pieInstance=null;}
+  const data=[s.won,s.lost,s.cash,s.pending];
+  const labels=['Gagnés','Perdus','Cashout','En cours'];
+  const colors=['#22c55e','#ef4444','#f59e0b','#4b5563'];
+  pieInstance=new Chart(document.getElementById('pieChart').getContext('2d'),{type:'doughnut',data:{labels,datasets:[{data,backgroundColor:colors,borderWidth:0,hoverOffset:4}]},options:{cutout:'62%',plugins:{legend:{display:false}}}});
+  document.getElementById('donutLegend').innerHTML=labels.map((l,i)=>`<div class="dl-item"><div class="dl-dot" style="background:${colors[i]}"></div><span class="dl-label">${l}</span><span class="dl-val" style="color:${colors[i]}">${data[i]}</span></div>`).join('');
+}
+
+function renderSportBars(s){
+  const sports=Object.entries(s.sportMap).sort((a,b)=>b[1].total-a[1].total);
+  const max=sports.length>0?sports[0][1].total:1;
+  const C=['#22c55e','#84cc16','#eab308','#f59e0b','#ef4444'];
+  document.getElementById('sportBars').innerHTML=sports.map(([name,d])=>{
+    const pct=Math.round(d.won/d.total*100),bw=Math.round(d.total/max*100);
+    const c=pct>=65?C[0]:pct>=50?C[1]:pct>=40?C[2]:pct>=30?C[3]:C[4];
+    return `<div class="stat-bar-row"><div class="stat-bar-label">${name}</div><div class="stat-bar-track"><div class="stat-bar-fill" style="width:${bw}%;background:${c};opacity:.7;"></div></div><div class="stat-bar-pct" style="color:${c}">${pct}%</div><div class="stat-bar-count">${d.won}/${d.total}</div></div>`;
+  }).join('');
+}
+
+function renderStreaks(s){
+  document.getElementById('streakGrid').innerHTML=`
+    <div class="streak-card"><div class="streak-val" style="color:var(--win)">${s.maxWin}</div><div class="streak-lbl">Série ✅ max</div></div>
+    <div class="streak-card"><div class="streak-val" style="color:var(--loss)">${s.maxLoss}</div><div class="streak-lbl">Série ❌ max</div></div>
+    <div class="streak-card"><div class="streak-val" style="color:${s.streakType==='win'?'var(--win)':s.streakType==='loss'?'var(--loss)':'var(--muted)'}">${s.streak}</div><div class="streak-lbl">En cours ${s.streakType==='win'?'✅':s.streakType==='loss'?'❌':'—'}</div></div>
+    <div class="streak-card" style="grid-column:span 1;"><div class="streak-val" style="color:var(--win)">${s.seqWon}</div><div class="streak-lbl">Séq. gagnées</div></div>
+    <div class="streak-card"><div class="streak-val" style="color:var(--pending)">${s.seqOpen}</div><div class="streak-lbl">Séq. en cours</div></div>
+    <div class="streak-card"><div class="streak-val" style="color:var(--loss)">${s.seqLost}</div><div class="streak-lbl">Séq. perdues</div></div>`;
+}
+
+function nextP1Threshold(bk){
+  const r=state.multiplier,n=state.nbPaliers;
+  const k=(r-1)/(Math.pow(r,n)-1); // mise P1 = floor(bk*k*100)/100
+  const currentCents=Math.round(getMiseP1(bk)*100);
+  const nextCents=currentCents+1;
+  const nextBK=nextCents/(k*100);
+  return {nextMise:nextCents/100, nextBK};
+}
+function renderPalierGrid(){
+  const bk=currentBK(),mises=getMises(bk),cumuls=getCumuls(bk);
+  const C=['#22c55e','#84cc16','#eab308','#f97316','#ef4444','#a78bfa'];
+  document.getElementById('palierGrid').innerHTML=mises.map((m,i)=>`
+    <div class="pal-card"><div class="pal-num">Palier ${i+1}</div><div class="pal-mise" style="color:${C[i]||'#a78bfa'}">${m.toFixed(2)} €</div><div class="pal-cumul">cumul ${cumuls[i].toFixed(2)} €</div></div>`).join('');
+  const t=nextP1Threshold(bk);
+  document.getElementById('palierNextThreshold').textContent=
+    `💡 Le palier 1 passera à ${t.nextMise.toFixed(2)} € à partir de ${t.nextBK.toFixed(2)} € de BK (actuellement ${bk.toFixed(2)} €).`;
+}
+
+// ═══════════════════════════
+//  SETTINGS
+// ═══════════════════════════
+
+function applyBkModeUI(){
+  const isStandard=state.bkMode==='standard';
+  const seqWrap=document.getElementById('martingaleSeqWrap');
+  const miseSuggWrap=document.getElementById('martingaleMiseSuggWrap');
+  const palierCard=document.getElementById('palierGridCard');
+  if(seqWrap)seqWrap.style.display=isStandard?'none':'';
+  if(miseSuggWrap)miseSuggWrap.style.display=isStandard?'none':'';
+  const miseInput=document.getElementById('fMise');
+  if(miseInput&&isStandard)miseInput.value='';
+  if(palierCard)palierCard.style.display=isStandard?'none':'';
+  const seqLabel=document.getElementById('sKSeqLabel');
+  if(seqLabel)seqLabel.textContent=isStandard?'Paris':'Séquences';
+}
+
+function goPage(id,el){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.bnav-item').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  el.classList.add('active');
+  if(id==='stats') render();
+  if(id==='cal')   renderCalendar();
+}
+
+function renderAlerts(){
+  const bk=currentBK();
+  const mises=getMises(bk);
+  const cumuls=getCumuls(bk);
+  const flat=allBets();
+  const resolved=flat.filter(b=>b.status!=='En cours');
+  const pending=flat.filter(b=>b.status==='En cours');
+  const alerts=[];
+
+  // ── Limite de perte quotidienne ──
+  if(state.dailyLossLimit>0){
+    const now=new Date();
+    const todayResolved=resolved.filter(b=>{
+      const d=new Date(b.id);
+      return d.getFullYear()===now.getFullYear()&&d.getMonth()===now.getMonth()&&d.getDate()===now.getDate();
+    });
+    const todayGain=todayResolved.reduce((s,b)=>s+b.gain,0);
+    if(todayGain<0&&Math.abs(todayGain)>=state.dailyLossLimit){
+      alerts.push({type:'danger',icon:'🛑',title:`Limite de perte quotidienne atteinte (-${Math.abs(todayGain).toFixed(2)} €)`,
+        desc:`Tu as fixé une limite de ${state.dailyLossLimit.toFixed(2)} € de perte par jour. Tu es à -${Math.abs(todayGain).toFixed(2)} € aujourd'hui sur ${todayResolved.length} pari(s) résolu(s). Il est temps de faire une pause.`});
+    }
+  }
+
+  // ── Alerte palier élevé ──
+  const openSeqs=state.sequences.filter(s=>seqStatus(s)==='open');
+  for(const seq of openSeqs){
+    const nextP=nextPalierForSeq(seq);
+    if(nextP>=5){
+      const mise=mises[nextP-1]||0;
+      const cumul=cumuls[nextP-1]||0;
+      alerts.push({type:'danger',icon:'🚨',title:`Séquence au palier ${nextP} — risque élevé`,
+        desc:`Mise requise : ${mise.toFixed(2)} € · Exposition cumulée : ${cumul.toFixed(2)} € · BK actuelle : ${bk.toFixed(2)} €. Évalue si tu continues ou tu stop la séquence.`});
+    } else if(nextP>=4){
+      const mise=mises[nextP-1]||0;
+      alerts.push({type:'warning',icon:'⚠️',title:`Séquence au palier ${nextP} — surveille ta BK`,
+        desc:`Mise requise : ${mise.toFixed(2)} € · Il reste ${(bk-cumuls[nextP-1]).toFixed(2)} € de marge si la séquence continue jusqu'au P${state.nbPaliers}.`});
+    }
+  }
+
+  // ── Série de pertes en cours ──
+  if(resolved.length>=3){
+    const recent=[...resolved].sort((a,b)=>b.id-a.id).slice(0,5);
+    const lossStreak=recent.findIndex(b=>b.status!=='Perdu');
+    const ls=lossStreak===-1?recent.length:lossStreak;
+    if(ls>=3) alerts.push({type:'warning',icon:'📉',title:`${ls} défaites consécutives`,
+      desc:`Prends le temps de vérifier ta sélection de paris. Un biais de sélection peut expliquer cette série.`});
+  }
+
+  // ── ROI négatif ──
+  const totalMise=resolved.reduce((s,b)=>s+b.mise,0);
+  const totalGain=resolved.reduce((s,b)=>s+b.gain,0);
+  const roi=totalMise>0?totalGain/totalMise*100:0;
+  if(resolved.length>=10&&roi<-15) alerts.push({type:'danger',icon:'💸',title:`ROI à ${roi.toFixed(1)} %`,
+    desc:`Ton ROI est significativement négatif sur ${resolved.length} paris résolus. Revois la sélection des cotes ou la discipline Martingale.`});
+  else if(resolved.length>=10&&roi<0) alerts.push({type:'warning',icon:'📊',title:`ROI légèrement négatif (${roi.toFixed(1)} %)`,
+    desc:`Sur ${resolved.length} paris. C'est courant en début de suivi — continue à alimenter tes données.`});
+  else if(resolved.length>=10&&roi>20) alerts.push({type:'success',icon:'🚀',title:`Excellent ROI : ${roi.toFixed(1)} %`,
+    desc:`Sur ${resolved.length} paris — tu es au-dessus des 20% de ROI, continue dans cette logique.`});
+
+  // ── BK en baisse ──
+  const benef=Math.round((bk-state.bkStart)*100)/100;
+  if(benef<0&&bk<state.bkStart*0.7) alerts.push({type:'danger',icon:'🔴',title:`BK en baisse de ${Math.abs(benef).toFixed(2)} € (${(benef/state.bkStart*100).toFixed(0)} %)`,
+    desc:`Ta bankroll a perdu plus de 30 % de sa valeur initiale. Envisage de réduire la mise unitaire.`});
+
+  // ── Paris en cours nombreux ──
+  if(pending.length>=4) alerts.push({type:'info',icon:'⏳',title:`${pending.length} paris en cours simultanément`,
+    desc:`Pense à résoudre tes paris passés pour avoir une vision précise de ta BK réelle.`});
+
+  // ── Pas d'alerte ──
+  if(alerts.length===0) alerts.push({type:'success',icon:'✅',title:'Tout va bien',
+    desc:'Aucune alerte à signaler. Continue sur ta lancée !'});
+
+  document.getElementById('alertsPanel').innerHTML=alerts.map(a=>`
+    <div class="alert-card ${a.type}">
+      <div class="alert-icon">${a.icon}</div>
+      <div class="alert-body">
+        <div class="alert-title">${a.title}</div>
+        <div class="alert-desc">${a.desc}</div>
+      </div>
+    </div>`).join('');
+
+  // ── Analyse par cote ──
+  const tranches=[
+    {label:'1.10–1.30',min:1.10,max:1.30},
+    {label:'1.30–1.50',min:1.30,max:1.50},
+    {label:'1.50–1.70',min:1.50,max:1.70},
+    {label:'1.70–2.00',min:1.70,max:2.00},
+    {label:'2.00+',    min:2.00,max:99},
+  ];
+  const rows=tranches.map(t=>{
+    const bets=resolved.filter(b=>b.cote>=t.min&&b.cote<t.max);
+    if(bets.length===0) return null;
+    const w=bets.filter(b=>b.status==='Gagné').length;
+    const pct=Math.round(w/bets.length*100);
+    const gain=bets.reduce((s,b)=>s+b.gain,0);
+    const c=pct>=60?'var(--win)':pct>=45?'var(--cashout)':'var(--loss)';
+    return `<div class="analyse-grid">
+      <div class="analyse-cell">
+        <div class="analyse-label">Cote ${t.label}</div>
+        <div class="analyse-value" style="color:${c}">${pct}%</div>
+        <div class="analyse-sub">${w}/${bets.length} gagnés</div>
+      </div>
+      <div class="analyse-cell">
+        <div class="analyse-label">Gain net</div>
+        <div class="analyse-value" style="color:${gain>=0?'var(--win)':'var(--loss)'}">${gain>=0?'+':''}${gain.toFixed(2)} €</div>
+        <div class="analyse-sub">sur ${bets.length} paris</div>
+      </div>
+    </div>`;
+  }).filter(Boolean);
+
+  document.getElementById('coteAnalyse').innerHTML=rows.length
+    ? rows.join('')
+    : '<div style="font-size:0.78rem;color:var(--muted);text-align:center;padding:16px;">Pas encore assez de données.</div>';
+}
+
+// ═══════════════════════════
+//  CALENDRIER
+// ═══════════════════════════
+
+function calPrev(){ calMonth--; if(calMonth<0){calMonth=11;calYear--;} renderCalendar(); }
+function calNext(){ calMonth++; if(calMonth>11){calMonth=0;calYear++;} renderCalendar(); }
+
+// Parse date string "DD/MM HH:MM" → Date object for current calYear/calMonth context
+function parseBetDate(dateStr){
+  // format: "DD/MM HH:MM" or "DD/MM/YYYY HH:MM"
+  if(!dateStr) return null;
+  const parts=dateStr.split(' ');
+  const dParts=parts[0].split('/');
+  const d=parseInt(dParts[0]),m=parseInt(dParts[1])-1;
+  const y=dParts[2]?parseInt(dParts[2]):calYear;
+  return new Date(y,m,d);
+}
+
+function getBetsForDay(year,month,day){
+  return allBets().filter(b=>{
+    const d=parseBetDate(b.date);
+    return d&&d.getFullYear()===year&&d.getMonth()===month&&d.getDate()===day;
+  });
+}
+
+function renderCalendar(){
+  const MONTHS=['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+  const DAYS=['L','M','M','J','V','S','D'];
+  document.getElementById('calMonthLabel').textContent=MONTHS[calMonth]+' '+calYear;
+
+  // Week summary (current week)
+  const now=new Date();
+  const dayOfWeek=(now.getDay()+6)%7; // Monday=0
+  const monday=new Date(now); monday.setDate(now.getDate()-dayOfWeek);
+  const sunday=new Date(monday); sunday.setDate(monday.getDate()+6);
+  const weekBets=allBets().filter(b=>{
+    const d=parseBetDate(b.date);
+    return d&&d>=monday&&d<=sunday;
+  });
+  const weekResolved=weekBets.filter(b=>b.status!=='En cours');
+  const weekGain=weekResolved.reduce((s,b)=>s+b.gain,0);
+  const weekWon=weekResolved.filter(b=>b.status==='Gagné').length;
+  const weekBar=document.getElementById('calWeekBar');
+  weekBar.innerHTML=`<div class="cal-week-title">Cette semaine</div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">
+      <div style="text-align:center;">
+        <div style="font-size:1.1rem;font-weight:700;color:var(--text)">${weekBets.length}</div>
+        <div style="font-size:0.6rem;color:var(--muted);">Paris</div>
+      </div>
+      <div style="text-align:center;">
+        <div style="font-size:1.1rem;font-weight:700;color:var(--win)">${weekWon}</div>
+        <div style="font-size:0.6rem;color:var(--muted);">Gagnés</div>
+      </div>
+      <div style="text-align:center;">
+        <div style="font-size:1.1rem;font-weight:700;color:var(--loss)">${weekResolved.length-weekWon}</div>
+        <div style="font-size:0.6rem;color:var(--muted);">Perdus</div>
+      </div>
+      <div style="text-align:center;">
+        <div style="font-size:1.1rem;font-weight:700;color:${weekGain>=0?'var(--win)':'var(--loss)'}">${weekGain>=0?'+':''}${weekGain.toFixed(2)}€</div>
+        <div style="font-size:0.6rem;color:var(--muted);">Gains</div>
+      </div>
+    </div>`;
+
+  // Calendar grid
+  const firstDay=(new Date(calYear,calMonth,1).getDay()+6)%7; // Mon=0
+  const daysInMonth=new Date(calYear,calMonth+1,0).getDate();
+  const todayStr=`${now.getDate()}-${now.getMonth()}-${now.getFullYear()}`;
+
+  let gridHTML='';
+  DAYS.forEach(d=>{ gridHTML+=`<div class="cal-dh">${d}</div>`; });
+
+  // Empty cells before first day
+  for(let i=0;i<firstDay;i++) gridHTML+=`<div class="cal-day empty"></div>`;
+
+  for(let d=1;d<=daysInMonth;d++){
+    const bets=getBetsForDay(calYear,calMonth,d);
+    const resolved=bets.filter(b=>b.status!=='En cours');
+    const dayGain=resolved.reduce((s,b)=>s+b.gain,0);
+    const isToday=`${d}-${calMonth}-${calYear}`===todayStr;
+    const isSelected=calSelectedDay===`${calYear}-${calMonth}-${d}`;
+    const hasBets=bets.length>0;
+
+    let dots='';
+    const won=bets.filter(b=>b.status==='Gagné').length;
+    const lost=bets.filter(b=>b.status==='Perdu').length;
+    const pend=bets.filter(b=>b.status==='En cours').length;
+    if(won>0)  dots+=`<div class="cal-dot" style="background:var(--win)"></div>`.repeat(Math.min(won,3));
+    if(lost>0) dots+=`<div class="cal-dot" style="background:var(--loss)"></div>`.repeat(Math.min(lost,3));
+    if(pend>0) dots+=`<div class="cal-dot" style="background:var(--pending)"></div>`.repeat(Math.min(pend,2));
+
+    const gainLabel=hasBets&&resolved.length>0
+      ?`<div class="cal-day-gain" style="color:${dayGain>=0?'var(--win)':'var(--loss)'}">${dayGain>=0?'+':''}${dayGain.toFixed(0)}€</div>`:'';
+
+    gridHTML+=`<div class="cal-day${hasBets?' has-bets':''}${isToday?' today':''}${isSelected?' selected':''}"
+      onclick="calSelectDay(${calYear},${calMonth},${d})">
+      <div class="cal-day-num">${d}</div>
+      <div class="cal-dots">${dots}</div>
+      ${gainLabel}
+    </div>`;
+  }
+  document.getElementById('calGrid').innerHTML=gridHTML;
+
+  // Refresh day detail if selected
+  if(calSelectedDay){
+    const [y,m,d]=calSelectedDay.split('-').map(Number);
+    renderCalDayDetail(y,m,d);
+  } else {
+    document.getElementById('calDayDetail').innerHTML='';
+  }
+}
+
+function calSelectDay(y,m,d){
+  const key=`${y}-${m}-${d}`;
+  calSelectedDay=calSelectedDay===key?null:key;
+  renderCalendar();
+}
+
+function renderCalDayDetail(y,m,d){
+  const bets=getBetsForDay(y,m,d);
+  if(bets.length===0){ document.getElementById('calDayDetail').innerHTML=''; return; }
+  const MONTHS=['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Août','Sep','Oct','Nov','Déc'];
+  const dayGain=bets.filter(b=>b.status!=='En cours').reduce((s,b)=>s+b.gain,0);
+  const sMap={Gagné:'s-win',Perdu:'s-loss',Cashout:'s-cashout','En cours':'s-pending'};
+  const sEmoji={Gagné:'✅',Perdu:'❌',Cashout:'💸','En cours':'⏳'};
+  document.getElementById('calDayDetail').innerHTML=`
+    <div class="cal-day-list">
+      <div class="cal-day-list-title">
+        ${d} ${MONTHS[m]} ${y} — ${bets.length} paris
+        <span style="float:right;color:${dayGain>=0?'var(--win)':'var(--loss)'};font-weight:700;">${dayGain>=0?'+':''}${dayGain.toFixed(2)} €</span>
+      </div>
+      ${bets.sort((a,b)=>a.id-b.id).map(b=>`
+        <div class="cal-bet-row">
+          <div class="cal-bet-sport">${b.sport}</div>
+          <div class="cal-bet-match" title="${b.match}">${b.match}</div>
+          <span class="status-badge ${sMap[b.status]||''}" style="margin-left:4px;">${sEmoji[b.status]||''}</span>
+          <div class="cal-bet-gain" style="color:${b.gain>=0?'var(--win)':'var(--loss)'}">
+            ${b.status==='En cours'?'—':(b.gain>=0?'+':'')+b.gain.toFixed(2)+'€'}
+          </div>
+        </div>`).join('')}
+    </div>`;
+}
+
+// ═══════════════════════════════════════════════════════
+//  GOOGLE SHEETS SYNC — Refresh Token (connexion permanente)
+// ═══════════════════════════════════════════════════════
+
+function fmt(v){return v.toFixed(2).replace('.',',')+' €';}
+
+initViewer();
 </script>
 </body>
 </html>

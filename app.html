@@ -1169,16 +1169,20 @@ function currentBK(){
 function nextPalierForSeq(seq){
   if(!seq||seq.bets.length===0)return 1;
   const last=[...seq.bets].sort((a,b)=>b.id-a.id)[0];
-  if(last.status==='Perdu')return Math.min(last.palier+1,state.nbPaliers);
+  if(last.status==='Perdu'||last.status==='Cashout')return Math.min(last.palier+1,state.nbPaliers);
   if(last.status==='En cours')return last.palier;
   return 1;
 }
 function seqStatus(seq){
   if(seq.bets.length===0)return 'open';
-  if(seq.bets.some(b=>b.status==='Gagné'||b.status==='Cashout'))return 'won';
+  // Un cashout n'est pas une victoire : la séquence reste ouverte, on peut continuer au palier suivant.
+  if(seq.bets.some(b=>b.status==='Gagné'))return 'won';
   if(seq.bets.some(b=>b.status==='En cours'))return 'open';
   const maxP=Math.max(...seq.bets.map(b=>b.palier));
-  if(maxP>=state.nbPaliers&&seq.bets.find(b=>b.palier===state.nbPaliers)?.status==='Perdu')return 'lost';
+  if(maxP>=state.nbPaliers){
+    const lastPalierBet=seq.bets.find(b=>b.palier===state.nbPaliers);
+    if(lastPalierBet&&(lastPalierBet.status==='Perdu'||lastPalierBet.status==='Cashout'))return 'lost';
+  }
   return 'open';
 }
 
@@ -2202,7 +2206,7 @@ function betStepInner(b,showPalier){
   const gainStr=b.status==='En cours'?'—':(b.gain>=0?'+':'')+b.gain.toFixed(2)+' €';
   const gainCls=b.gain>=0?'pos':'neg';
   let nextPalierBtn='';
-  if(b.status==='Perdu'&&state.bkMode!=='standard'){
+  if((b.status==='Perdu'||b.status==='Cashout')&&state.bkMode!=='standard'){
     const {seq}=findBet(b.id);
     if(seq&&seqStatus(seq)==='open'){
       const sortedBets=[...seq.bets].sort((a,c)=>a.id-c.id);

@@ -697,7 +697,7 @@ body{font-family:-apple-system,'Segoe UI',system-ui,sans-serif;background:var(--
         </div>
       </div>
       <canvas id="mainChart" height="130"></canvas>
-      <div class="seq-hint" id="chartSeqHint" style="margin-top:8px;">Chaque point = une séquence résolue.</div>
+      <div class="seq-hint" id="chartSeqHint" style="margin-top:8px;">Chaque point = un pari résolu, regroupé avec les autres paris de sa séquence.</div>
     </div>
 
     <!-- Comparatif martingale vs mise à plat -->
@@ -1593,25 +1593,28 @@ function parseTicketText(text){
     const numRe=/^[\d\s.,€:%\-hH|]+$/;
     const nameToken='[A-ZÀ-Ý][A-Za-zÀ-ÿ.\'\\-]{1,20}';
     const multiWord=nameToken+'(?:\\s+'+nameToken+')?'; // au plus 2 mots (prénom+nom, etc.) pour ne pas absorber le texte qui suit
+    // Un "camp" est soit un nom seul, soit une paire "A / B" (double) — les deux formes doivent
+    // être reconnues des deux côtés d'un tiret ou d'un score, sinon un joueur de double est perdu.
+    const sideRe=multiWord+'(?:\\s*/\\s*'+multiWord+')?';
     const relevantLines=lines.filter((l,i)=>i!==pronoLineIdx&&!skipRe.test(l)&&!numRe.test(l)&&!/€/.test(l)&&!/\d{1,2}h\d{2}/i.test(l));
 
-    // Cas "le match n'a pas commencé" : les deux camps sont sur UNE seule ligne, séparés par " - "
-    // (jamais par "/", qui lui sépare les deux membres d'une même équipe/paire).
-    const vsLineRe=new RegExp('('+multiWord+')\\s+-\\s+('+multiWord+')');
+    // Cas "le match n'a pas commencé" : les deux camps sont sur UNE seule ligne, séparés par un tiret
+    // (-, – ou —). Chaque camp peut lui-même être une paire "A / B" (double).
+    const vsLineRe=new RegExp('('+sideRe+')\\s+[-–—]\\s+('+sideRe+')');
     let vsMatch=null;
     for(const l of relevantLines){
       const m=l.match(vsLineRe);
       if(m){vsMatch=m[1]+' vs '+m[2];break;}
     }
-    const pairRe=new RegExp(multiWord+'(?:\\s*/\\s*'+multiWord+')?','g');
+    const pairRe=new RegExp(sideRe,'g');
     if(vsMatch){
       result.match=vsMatch;result.matchedAny=true;
     }else{
       // Cas "match en direct, un seul camp par ligne avec score entre les deux" (ex: foot) :
-      // deux noms sur la MÊME ligne, sans "/", avec un score du type "0 – 0" entre les deux.
+      // deux camps sur la MÊME ligne (nom seul ou paire "A / B"), avec un score du type "0 – 0" entre les deux.
       let inlineMatch=null;
       for(const l of relevantLines){
-        const found=[...l.matchAll(pairRe)].filter(m=>!m[0].includes('/'));
+        const found=[...l.matchAll(pairRe)];
         if(found.length>=2){
           const a=found[0],b=found[1];
           const between=l.slice(a.index+a[0].length,b.index);
@@ -2112,15 +2115,23 @@ function computeStats(){
   return{bk,benef,roi,winRate,totalMise,coteMoy,won:won.length,lost:lost.length,cash:cash.length,pending:pending.length,total:resolved.length,maxWin,maxLoss,streak,streakType,sportMap,bookmakerMap,seqs,seqWon,seqLost,seqOpen,maxDD,maxDDPct,monthly,netMove};
 }
 
-// Un point par séquence résolue (checkpoint BK au dernier pari de la séquence), triés chronologiquement
+// Un point par pari résolu (pas par séquence), mais les paris d'une même séquence restent
+// groupés consécutivement, à la place de la séquence dans l'ordre chronologique de son 1er pari —
+// même si un pari d'une séquence antérieure a été enregistré après un pari d'une séquence suivante.
 function computeSequenceSeries(){
-  return state.sequences.map(seq=>{
-    const resolvedBets=seq.bets.filter(b=>b.status!=='En cours');
-    if(resolvedBets.length===0)return null;
-    const lastBet=[...resolvedBets].sort((a,b)=>b.id-a.id)[0];
-    const seqGain=Math.round(resolvedBets.reduce((s,b)=>s+b.gain,0)*100)/100;
-    return {seq,lastId:lastBet.id,bkAfter:lastBet.bkAfter,gain:seqGain,status:seqStatus(seq)};
-  }).filter(Boolean).sort((a,b)=>a.lastId-b.lastId);
+  const seqOrder=[...state.sequences].sort((a,b)=>{
+    const aFirst=a.bets.length?Math.min(...a.bets.map(x=>x.id)):Infinity;
+    const bFirst=b.bets.length?Math.min(...b.bets.map(x=>x.id)):Infinity;
+    return aFirst-bFirst;
+  });
+  const out=[];
+  for(const seq of seqOrder){
+    const resolvedBets=seq.bets.filter(b=>b.status!=='En cours').sort((a,b)=>a.id-b.id);
+    for(const b of resolvedBets){
+      out.push({seq,bet:b,lastId:b.id,bkAfter:b.bkAfter,gain:b.gain,status:b.status==='Gagné'?'won':b.status==='Perdu'?'lost':'cashout'});
+    }
+  }
+  return out;
 }
 
 // Simulation "mise à plat" : mêmes paris/cotes/résultats, mais mise constante (moyenne des mises réelles)
@@ -2132,9 +2143,10 @@ function computeFlatBenchmark(){
   const entries=computeSequenceSeries();
   let flatBK=state.bkStart;
   const series=entries.map(e=>{
-    const seqFlatGain=Math.round(e.seq.bets.filter(b=>b.status!=='En cours').reduce((s,b)=>s+(b.mise>0?b.gain/b.mise*flatStake:0),0)*100)/100;
-    flatBK=Math.round((flatBK+seqFlatGain)*100)/100;
-    return {lastId:e.lastId,flatBK,flatGain:seqFlatGain};
+    const b=e.bet;
+    const betFlatGain=Math.round((b.mise>0?b.gain/b.mise*flatStake:0)*100)/100;
+    flatBK=Math.round((flatBK+betFlatGain)*100)/100;
+    return {lastId:e.lastId,flatBK,flatGain:betFlatGain};
   });
   const realBK=currentBK();
   const realBenef=Math.round((realBK-state.bkStart-netMovements())*100)/100;
@@ -2427,7 +2439,7 @@ function renderMainChart(s){
   if(chartInstance){chartInstance.destroy();chartInstance=null;}
   if(entries.length===0)return;
   const G='#1e2640',T='#64748b';
-  const labels=entries.map((_,i)=>'Séq '+(i+1));
+  const labels=entries.map((_,i)=>'Pari '+(i+1));
   const ctx=document.getElementById('mainChart').getContext('2d');
   if(chartMode==='bk'){
     const bkR=niceAxisRange(entries.map(e=>e.bkAfter));
@@ -2465,13 +2477,13 @@ function renderDonut(s){
 }
 
 function renderSportBars(s){
-  const sports=Object.entries(s.sportMap).sort((a,b)=>b[1].total-a[1].total);
-  const max=sports.length>0?sports[0][1].total:1;
+  const sports=Object.entries(s.sportMap)
+    .map(([name,d])=>[name,d,d.total>0?Math.round(d.won/d.total*100):0])
+    .sort((a,b)=>b[2]-a[2]);
   const C=['#22c55e','#84cc16','#eab308','#f59e0b','#ef4444'];
-  document.getElementById('sportBars').innerHTML=sports.map(([name,d])=>{
-    const pct=Math.round(d.won/d.total*100),bw=Math.round(d.total/max*100);
+  document.getElementById('sportBars').innerHTML=sports.map(([name,d,pct])=>{
     const c=pct>=65?C[0]:pct>=50?C[1]:pct>=40?C[2]:pct>=30?C[3]:C[4];
-    return `<div class="stat-bar-row"><div class="stat-bar-label">${name}</div><div class="stat-bar-track"><div class="stat-bar-fill" style="width:${bw}%;background:${c};opacity:.7;"></div></div><div class="stat-bar-pct" style="color:${c}">${pct}%</div><div class="stat-bar-count">${d.won}/${d.total}</div></div>`;
+    return `<div class="stat-bar-row"><div class="stat-bar-label">${name}</div><div class="stat-bar-track"><div class="stat-bar-fill" style="width:${pct}%;background:${c};opacity:.7;"></div></div><div class="stat-bar-pct" style="color:${c}">${pct}%</div><div class="stat-bar-count">${d.won}/${d.total}</div></div>`;
   }).join('');
 }
 

@@ -730,6 +730,12 @@ body{font-family:-apple-system,'Segoe UI',system-ui,sans-serif;background:var(--
       <div class="stat-bar-wrap" id="sportBars"></div>
     </div>
 
+    <!-- Paliers -->
+    <div class="card" id="palierStatsCard">
+      <div class="card-title">Par palier</div>
+      <div class="stat-bar-wrap" id="palierBars"></div>
+    </div>
+
     <!-- Bookmakers -->
     <div class="card" id="bookmakerCard" style="display:none;">
       <div class="card-title">Par bookmaker</div>
@@ -2099,6 +2105,8 @@ function computeStats(){
   for(const b of resolved){if(!sportMap[b.sport])sportMap[b.sport]={won:0,total:0};sportMap[b.sport].total++;if(b.status==='Gagné')sportMap[b.sport].won++;}
   const bookmakerMap={};
   for(const b of resolved){if(!b.bookmaker)continue;if(!bookmakerMap[b.bookmaker])bookmakerMap[b.bookmaker]={won:0,total:0};bookmakerMap[b.bookmaker].total++;if(b.status==='Gagné')bookmakerMap[b.bookmaker].won++;}
+  const palierMap={};
+  for(const b of resolved){const k='Palier '+b.palier;if(!palierMap[k])palierMap[k]={won:0,total:0};palierMap[k].total++;if(b.status==='Gagné')palierMap[k].won++;}
   const seqs=state.sequences;
   const seqWon=seqs.filter(s=>seqStatus(s)==='won').length;
   const seqLost=seqs.filter(s=>seqStatus(s)==='lost').length;
@@ -2129,7 +2137,7 @@ function computeStats(){
   const potentialGain=Math.round(pending.reduce((s,b)=>s+computeGain(b.mise,b.cote,'Gagné',null),0)*100)/100;
   const potentialBK=Math.round((bk+potentialGain)*100)/100;
 
-  return{bk,benef,roi,winRate,totalMise,coteMoy,won:won.length,lost:lost.length,cash:cash.length,pending:pending.length,total:resolved.length,maxWin,maxLoss,streak,streakType,sportMap,bookmakerMap,seqs,seqWon,seqLost,seqOpen,maxDD,maxDDPct,monthly,netMove,potentialGain,potentialBK};
+  return{bk,benef,roi,winRate,totalMise,coteMoy,won:won.length,lost:lost.length,cash:cash.length,pending:pending.length,total:resolved.length,maxWin,maxLoss,streak,streakType,sportMap,bookmakerMap,palierMap,seqs,seqWon,seqLost,seqOpen,maxDD,maxDDPct,monthly,netMove,potentialGain,potentialBK};
 }
 
 // Un point par pari résolu (pas par séquence), mais les paris d'une même séquence restent
@@ -2340,6 +2348,7 @@ function renderStatsPage(s){
   renderCompare();
   renderDonut(s);
   renderSportBars(s);
+  renderPalierBars(s);
   renderBookmakerBars(s);
   renderMonthlyRecap(s);
   renderStreaks(s);
@@ -2512,6 +2521,21 @@ function renderSportBars(s){
   }).join('');
 }
 
+function renderPalierBars(s){
+  const card=document.getElementById('palierStatsCard');
+  if(state.bkMode==='standard'){card.style.display='none';return;}
+  const paliers=Object.entries(s.palierMap)
+    .map(([name,d])=>[name,d,d.total>0?Math.round(d.won/d.total*100):0])
+    .sort((a,b)=>b[2]-a[2]);
+  if(paliers.length===0){card.style.display='none';return;}
+  card.style.display='';
+  const C=['#22c55e','#84cc16','#eab308','#f59e0b','#ef4444'];
+  document.getElementById('palierBars').innerHTML=paliers.map(([name,d,pct])=>{
+    const c=pct>=65?C[0]:pct>=50?C[1]:pct>=40?C[2]:pct>=30?C[3]:C[4];
+    return `<div class="stat-bar-row"><div class="stat-bar-label">${name}</div><div class="stat-bar-track"><div class="stat-bar-fill" style="width:${pct}%;background:${c};opacity:.7;"></div></div><div class="stat-bar-pct" style="color:${c}">${pct}%</div><div class="stat-bar-count">${d.won}/${d.total}</div></div>`;
+  }).join('');
+}
+
 function renderStreaks(s){
   document.getElementById('streakGrid').innerHTML=`
     <div class="streak-card"><div class="streak-val" style="color:var(--win)">${s.maxWin}</div><div class="streak-lbl">Série ✅ max</div></div>
@@ -2559,6 +2583,8 @@ function applyBkModeUI(){
   const miseInput=document.getElementById('fMise');
   if(miseInput&&isStandard)miseInput.value='';
   if(palierCard)palierCard.style.display=isStandard?'none':'';
+  const palierStatsCard=document.getElementById('palierStatsCard');
+  if(palierStatsCard)palierStatsCard.style.display=isStandard?'none':'';
   const seqLabel=document.getElementById('sKSeqLabel');
   if(seqLabel)seqLabel.textContent=isStandard?'Paris':'Séquences';
   const miseModeWrap=document.getElementById('miseModeWrap');

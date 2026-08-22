@@ -84,8 +84,11 @@ body{font-family:-apple-system,'Segoe UI',system-ui,sans-serif;background:var(--
 .bk-delta.pos{background:rgba(34,197,94,.15);color:var(--win);}
 .bk-delta.neg{background:rgba(239,68,68,.15);color:var(--loss);}
 .icon-btn{background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--muted);font-size:1.1rem;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;}
-.bk-potential-bar{flex-shrink:0;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 16px;background:rgba(245,158,11,.08);border-bottom:1px solid rgba(245,158,11,.25);font-size:0.72rem;font-weight:600;color:#f59e0b;}
-.bk-potential-bar span:last-child{font-variant-numeric:tabular-nums;font-weight:700;}
+.bk-potential-bar{flex-shrink:0;display:flex;flex-direction:column;gap:2px;padding:6px 16px;background:var(--surface);border-bottom:1px solid var(--border);font-size:0.72rem;font-weight:600;}
+.bk-potential-row{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.bk-potential-row.loss{color:var(--loss);}
+.bk-potential-row.gain{color:var(--cashout);}
+.bk-potential-row span:last-child{font-variant-numeric:tabular-nums;font-weight:700;}
 
 /* ── PAGES CONTAINER ── */
 .pages{flex:1;overflow:hidden;position:relative;}
@@ -460,10 +463,16 @@ body{font-family:-apple-system,'Segoe UI',system-ui,sans-serif;background:var(--
   <div class="icon-btn" onclick="openSettings()">⚙️</div>
 </header>
 
-<!-- BK POTENTIELLE (si tous les paris en cours gagnent) -->
+<!-- BK POTENTIELLE (selon l'issue des paris en cours) -->
 <div class="bk-potential-bar" id="bkPotentialBar" style="display:none;">
-  <span>⏳ BK potentielle</span>
-  <span id="bkPotentialValue">0,00 €</span>
+  <div class="bk-potential-row loss">
+    <span>📉 BK potentielle (perte)</span>
+    <span id="bkPotentialLossValue">0,00 €</span>
+  </div>
+  <div class="bk-potential-row gain">
+    <span>📈 BK potentielle (gain)</span>
+    <span id="bkPotentialValue">0,00 €</span>
+  </div>
 </div>
 
 <!-- PAGES -->
@@ -543,7 +552,7 @@ body{font-family:-apple-system,'Segoe UI',system-ui,sans-serif;background:var(--
             <option>Football</option><option>Tennis</option><option>Basketball</option>
             <option>Hockey</option><option>Badminton</option><option>Tennis de table</option>
             <option>Volleyball</option><option>Foot américain</option><option>Rugby</option>
-            <option>Baseball</option><option>Snooker</option><option>Pétanque</option><option>Autre</option>
+            <option>Baseball</option><option>Snooker</option><option>Pétanque</option><option>F1</option><option>Autre</option>
           </select>
         </div>
 
@@ -1244,7 +1253,7 @@ function setBetType(type,el){
 const SPORT_OPTIONS_HTML=`<option>Football</option><option>Tennis</option><option>Basketball</option>
         <option>Hockey</option><option>Badminton</option><option>Tennis de table</option>
         <option>Volleyball</option><option>Foot américain</option><option>Rugby</option>
-        <option>Baseball</option><option>Snooker</option><option>Pétanque</option><option>Autre</option>`;
+        <option>Baseball</option><option>Snooker</option><option>Pétanque</option><option>F1</option><option>Autre</option>`;
 function addComboRow(listId,resultId){
   listId=listId||'comboList';resultId=resultId||'comboCoteResult';
   const id=++comboRowIdSeq;
@@ -2133,11 +2142,13 @@ function computeStats(){
   }
   const monthly=Object.values(monthMap).sort((a,x)=>x.key.localeCompare(a.key));
 
-  // BK potentielle : si tous les paris en cours sont gagnants
+  // BK potentielle : si tous les paris en cours sont gagnants / si tous sont perdants
   const potentialGain=Math.round(pending.reduce((s,b)=>s+computeGain(b.mise,b.cote,'Gagné',null),0)*100)/100;
   const potentialBK=Math.round((bk+potentialGain)*100)/100;
+  const potentialLossGain=Math.round(pending.reduce((s,b)=>s+computeGain(b.mise,b.cote,'Perdu',null),0)*100)/100;
+  const potentialLossBK=Math.round((bk+potentialLossGain)*100)/100;
 
-  return{bk,benef,roi,winRate,totalMise,coteMoy,won:won.length,lost:lost.length,cash:cash.length,pending:pending.length,total:resolved.length,maxWin,maxLoss,streak,streakType,sportMap,bookmakerMap,palierMap,seqs,seqWon,seqLost,seqOpen,maxDD,maxDDPct,monthly,netMove,potentialGain,potentialBK};
+  return{bk,benef,roi,winRate,totalMise,coteMoy,won:won.length,lost:lost.length,cash:cash.length,pending:pending.length,total:resolved.length,maxWin,maxLoss,streak,streakType,sportMap,bookmakerMap,palierMap,seqs,seqWon,seqLost,seqOpen,maxDD,maxDDPct,monthly,netMove,potentialGain,potentialBK,potentialLossGain,potentialLossBK};
 }
 
 // Un point par pari résolu (pas par séquence), mais les paris d'une même séquence restent
@@ -2196,9 +2207,10 @@ function renderTopbar(s){
   d.textContent=(s.benef>=0?'+':'')+fmt(s.benef);
   d.className='bk-delta '+(s.benef>=0?'pos':'neg');
   const potBar=document.getElementById('bkPotentialBar');
-  if(s.pending>0&&s.potentialGain>0){
+  if(s.pending>0){
     potBar.style.display='flex';
     document.getElementById('bkPotentialValue').textContent=fmt(s.potentialBK);
+    document.getElementById('bkPotentialLossValue').textContent=fmt(s.potentialLossBK);
   }else{
     potBar.style.display='none';
   }
